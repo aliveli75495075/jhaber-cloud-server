@@ -11,6 +11,64 @@ const central = require('./central-db');
 
 const PORT = Number(process.env.PORT) || 47850;
 let adminSessionTokens = new Set();
+const geoIpMemoryCache = {};
+
+function resolveGeoIpForUser(userId, rawIp) {
+  const cleanIp = String(rawIp || '').trim().replace(/^::ffff:/, '');
+  if (!cleanIp || cleanIp === '127.0.0.1' || cleanIp === '::1' || cleanIp === 'localhost' || cleanIp.startsWith('192.168.') || cleanIp.startsWith('10.') || cleanIp.startsWith('172.16.')) {
+    return;
+  }
+  if (geoIpMemoryCache[cleanIp] === 'pending') return;
+  if (geoIpMemoryCache[cleanIp] && typeof geoIpMemoryCache[cleanIp] === 'object') {
+    const cached = geoIpMemoryCache[cleanIp];
+    const db = central.loadCentralDb();
+    const u = db.users.find(x => x.id === userId);
+    if (u && (!u.geoCity || u.geoIpResolved !== cleanIp)) {
+      u.geoCity = cached.city;
+      u.geoRegion = cached.region;
+      u.geoCountry = cached.country;
+      u.geoIsp = cached.isp;
+      u.geoLat = cached.lat;
+      u.geoLon = cached.lon;
+      u.geoIpResolved = cleanIp;
+      central.saveCentralDb(db);
+    }
+    return;
+  }
+  geoIpMemoryCache[cleanIp] = 'pending';
+  fetch('https://ipwho.is/' + encodeURIComponent(cleanIp))
+    .then(r => r.json())
+    .then(d => {
+      if (d && d.success !== false && (d.city || d.region)) {
+        const info = {
+          city: d.region || d.city || 'Türkiye',
+          region: d.region || d.city || '',
+          country: d.country || 'Türkiye',
+          isp: (d.connection && (d.connection.isp || d.connection.org)) || 'İnternet Servis Sağlayıcı',
+          lat: Number(d.latitude) || 0,
+          lon: Number(d.longitude) || 0
+        };
+        geoIpMemoryCache[cleanIp] = info;
+        const db = central.loadCentralDb();
+        const u = db.users.find(x => x.id === userId);
+        if (u) {
+          if (!u.manualGeoCity) u.geoCity = info.city;
+          u.geoRegion = info.region;
+          u.geoCountry = info.country;
+          u.geoIsp = info.isp;
+          u.geoLat = info.lat;
+          u.geoLon = info.lon;
+          u.geoIpResolved = cleanIp;
+          central.saveCentralDb(db);
+        }
+      } else {
+        delete geoIpMemoryCache[cleanIp];
+      }
+    })
+    .catch(() => {
+      delete geoIpMemoryCache[cleanIp];
+    });
+}
 
 function sanitizeUserForClient(u) {
   if (!u) return null;
@@ -351,6 +409,7 @@ const server = http.createServer((req, res) => {
           detail: `Yeni üyelik oluşturuldu (${verifyNow ? 'Doğrulanmış' : 'Doğrulanmamış'}). Onay bekliyor.`
         });
         central.saveCentralDb(db);
+        resolveGeoIpForUser(newUser.id, rawIp);
         return replyJson(200, { ok: true, user: sanitizeUserForClient(newUser), centralState: buildClientSyncPayload(db, newUser) });
       }
 
@@ -399,6 +458,7 @@ const server = http.createServer((req, res) => {
           detail: `Giriş yapıldı (Durum: ${u.status}, Paket: ${u.planLabel})`
         });
         central.saveCentralDb(db);
+        resolveGeoIpForUser(u.id, rawIp);
         return replyJson(200, { ok: true, user: sanitizeUserForClient(u), centralState: buildClientSyncPayload(db, u) });
       }
 
@@ -422,6 +482,7 @@ const server = http.createServer((req, res) => {
         u.lastIp = rawIp;
         u.lastPort = clientPort;
         u.lastSeenAt = Date.now();
+        resolveGeoIpForUser(u.id, rawIp);
         u.hostname = body.hostname || u.hostname || '';
         u.osInfo = body.osInfo || u.osInfo || '';
         u.trafficRequests = (u.trafficRequests || 0) + 1;
@@ -802,6 +863,18 @@ const server = http.createServer((req, res) => {
           if (body.vipPlan !== undefined) u.vipPlan = body.vipPlan;
           if (body.verified !== undefined) u.verified = Boolean(body.verified);
           if (body.contact !== undefined) u.contact = String(body.contact).trim();
+          if (body.geoCity !== undefined) {
+            const val = String(body.geoCity).trim();
+            if (val === '' || val === 'auto') {
+              u.manualGeoCity = '';
+              u.geoCity = '';
+              resolveGeoIpForUser(u.id, u.lastIp);
+            } else {
+              u.manualGeoCity = val;
+              u.geoCity = val;
+            }
+          }
+          if (body.geoIsp !== undefined) u.geoIsp = String(body.geoIsp).trim();
           if (body.deviceLockEnabled !== undefined) {
             u.deviceLock = {
               enabled: Boolean(body.deviceLockEnabled),

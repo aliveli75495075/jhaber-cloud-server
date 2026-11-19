@@ -182,14 +182,22 @@ input, textarea, select, code, pre { user-select: text; }
 }
 .radar-screen {
   position: relative;
-  width: 190px;
-  height: 190px;
-  background: radial-gradient(circle, #08231c 0%, #061515 65%, #02070d 100%);
-  border: 2px solid rgba(16, 185, 129, 0.5);
+  width: 290px;
+  height: 290px;
+  background: radial-gradient(circle, #061c24 0%, #051319 65%, #02080e 100%);
+  border: 2.5px solid rgba(16, 185, 129, 0.65);
   border-radius: 50%;
   overflow: hidden;
-  box-shadow: 0 0 24px rgba(16, 185, 129, 0.22), inset 0 0 18px rgba(16, 185, 129, 0.18);
+  box-shadow: 0 0 28px rgba(16, 185, 129, 0.28), inset 0 0 24px rgba(16, 185, 129, 0.22);
   flex-shrink: 0;
+}
+.radar-map-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
 }
 .radar-ring {
   position: absolute;
@@ -197,54 +205,106 @@ input, textarea, select, code, pre { user-select: text; }
   left: 50%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 1px dashed rgba(16, 185, 129, 0.32);
+  border: 1px dashed rgba(16, 185, 129, 0.28);
   pointer-events: none;
+  z-index: 2;
 }
 .radar-ring-1 { width: 33%; height: 33%; }
 .radar-ring-2 { width: 66%; height: 66%; }
 .radar-ring-3 { width: 97%; height: 97%; border-style: solid; border-color: rgba(16, 185, 129, 0.45); }
 .radar-cross-h {
   position: absolute; top: 50%; left: 0; right: 0; height: 1px;
-  background: rgba(16, 185, 129, 0.28); pointer-events: none;
+  background: rgba(16, 185, 129, 0.22); pointer-events: none; z-index: 2;
 }
 .radar-cross-v {
   position: absolute; left: 50%; top: 0; bottom: 0; width: 1px;
-  background: rgba(16, 185, 129, 0.28); pointer-events: none;
+  background: rgba(16, 185, 129, 0.22); pointer-events: none; z-index: 2;
 }
 .radar-sweep {
   position: absolute; inset: 0; border-radius: 50%;
-  background: conic-gradient(from 0deg, rgba(16, 185, 129, 0.45) 0deg, rgba(16, 185, 129, 0.08) 45deg, transparent 65deg);
-  animation: radar-sweep-anim 3.5s linear infinite;
+  background: conic-gradient(from 0deg, rgba(16, 185, 129, 0.38) 0deg, rgba(16, 185, 129, 0.06) 45deg, transparent 65deg);
+  animation: radar-sweep-anim 4.2s linear infinite;
   pointer-events: none;
+  z-index: 3;
 }
 @keyframes radar-sweep-anim {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 .radar-center {
-  position: absolute; top: 50%; left: 50%; width: 8px; height: 8px;
-  background: #10b981; border-radius: 50%; transform: translate(-50%, -50%);
-  box-shadow: 0 0 10px #10b981; z-index: 2;
+  position: absolute; top: 50%; left: 50%; width: 5px; height: 5px;
+  background: rgba(16, 185, 129, 0.5); border-radius: 50%; transform: translate(-50%, -50%);
+  z-index: 2; pointer-events: none;
 }
 .radar-blip {
-  position: absolute; width: 10px; height: 10px; background: #38bdf8;
-  border-radius: 50%; transform: translate(-50%, -50%);
-  box-shadow: 0 0 10px #38bdf8; cursor: pointer; z-index: 4;
-  transition: transform 0.2s;
+  position: absolute;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: #10b981;
+  color: #022c22;
+  font-size: 9.5px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  border: 1.5px solid #a7f3d0;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 12px #10b981;
+  cursor: pointer;
+  z-index: 6;
+  transition: transform 0.18s, background 0.18s, box-shadow 0.18s;
+}
+.radar-blip.offline {
+  background: #38bdf8;
+  color: #082f49;
+  border-color: #bae6fd;
+  box-shadow: 0 0 10px #38bdf8;
+}
+.radar-blip.selected {
+  background: #fbbf24 !important;
+  color: #451a03 !important;
+  border-color: #fef08a !important;
+  box-shadow: 0 0 18px #fbbf24 !important;
+  transform: translate(-50%, -50%) scale(1.3);
+  z-index: 8;
 }
 .radar-blip:hover {
-  transform: translate(-50%, -50%) scale(1.6);
+  transform: translate(-50%, -50%) scale(1.35);
   background: #fbbf24;
-  box-shadow: 0 0 14px #fbbf24;
+  color: #451a03;
+  box-shadow: 0 0 16px #fbbf24;
+  z-index: 9;
 }
 .radar-blip::after {
-  content: ''; position: absolute; inset: -3px; border-radius: 50%;
-  border: 1px solid rgba(56, 189, 248, 0.8);
-  animation: radar-blip-pulse 1.8s infinite;
+  content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  border: 1.5px solid rgba(16, 185, 129, 0.85);
+  animation: radar-blip-pulse 1.9s infinite;
+  pointer-events: none;
+}
+.radar-blip.offline::after {
+  border-color: rgba(56, 189, 248, 0.7);
+}
+.radar-city-label {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(2, 6, 23, 0.88);
+  color: #f8fafc;
+  border: 1px solid rgba(52, 211, 153, 0.55);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 8.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
 }
 @keyframes radar-blip-pulse {
   0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.3); opacity: 0; }
 }
 
 /* ================= WhatsApp & Export & Filter Buttons ================= */
@@ -534,6 +594,236 @@ const AdminApp = {
 
   _geoCache: {},
   _geoResolving: {},
+  radarScope: 'all', // 'all' (tüm kayıtlı + çevrimiçi) | 'online' (sadece çevrimiçi)
+
+  // Türkiye 81 İl + Uluslararası Merkezlerin Gerçek Coğrafi Koordinatları (Enlem / Boylam)
+  TR_PROVINCE_COORDS: {
+    'Adana': { lat: 37.00, lon: 35.32 },
+    'Adıyaman': { lat: 37.76, lon: 38.28 },
+    'Afyonkarahisar': { lat: 38.75, lon: 30.54 },
+    'Ağrı': { lat: 39.72, lon: 43.05 },
+    'Aksaray': { lat: 38.37, lon: 34.03 },
+    'Amasya': { lat: 40.65, lon: 35.83 },
+    'Ankara': { lat: 39.93, lon: 32.85 },
+    'Antalya': { lat: 36.89, lon: 30.71 },
+    'Ardahan': { lat: 41.11, lon: 42.70 },
+    'Artvin': { lat: 41.18, lon: 41.82 },
+    'Aydın': { lat: 37.84, lon: 27.84 },
+    'Balıkesir': { lat: 39.65, lon: 27.88 },
+    'Bartın': { lat: 41.63, lon: 32.34 },
+    'Batman': { lat: 37.88, lon: 41.13 },
+    'Bayburt': { lat: 40.26, lon: 40.22 },
+    'Bilecik': { lat: 40.14, lon: 29.98 },
+    'Bingöl': { lat: 38.88, lon: 40.50 },
+    'Bitlis': { lat: 38.40, lon: 42.11 },
+    'Bolu': { lat: 40.73, lon: 31.61 },
+    'Burdur': { lat: 37.72, lon: 30.29 },
+    'Bursa': { lat: 40.18, lon: 29.06 },
+    'Çanakkale': { lat: 40.15, lon: 26.41 },
+    'Çankırı': { lat: 40.60, lon: 33.61 },
+    'Çorum': { lat: 40.55, lon: 34.95 },
+    'Denizli': { lat: 37.77, lon: 29.09 },
+    'Diyarbakır': { lat: 37.91, lon: 40.24 },
+    'Düzce': { lat: 40.84, lon: 31.16 },
+    'Edirne': { lat: 41.67, lon: 26.56 },
+    'Elazığ': { lat: 38.67, lon: 39.22 },
+    'Erzincan': { lat: 39.75, lon: 39.49 },
+    'Erzurum': { lat: 39.90, lon: 41.27 },
+    'Eskişehir': { lat: 39.77, lon: 30.52 },
+    'Gaziantep': { lat: 37.06, lon: 37.38 },
+    'Giresun': { lat: 40.91, lon: 38.39 },
+    'Gümüşhane': { lat: 40.46, lon: 39.48 },
+    'Hakkari': { lat: 37.57, lon: 43.74 },
+    'Hatay': { lat: 36.20, lon: 36.16 },
+    'Iğdır': { lat: 39.92, lon: 44.04 },
+    'Isparta': { lat: 37.76, lon: 30.55 },
+    'İstanbul': { lat: 41.01, lon: 28.97 },
+    'İzmir': { lat: 38.42, lon: 27.14 },
+    'Kahramanmaraş': { lat: 37.58, lon: 36.93 },
+    'Karabük': { lat: 41.20, lon: 32.62 },
+    'Karaman': { lat: 37.18, lon: 33.22 },
+    'Kars': { lat: 40.60, lon: 43.09 },
+    'Kastamonu': { lat: 41.38, lon: 33.78 },
+    'Kayseri': { lat: 38.73, lon: 35.48 },
+    'Kırıkkale': { lat: 39.84, lon: 33.51 },
+    'Kırklareli': { lat: 41.73, lon: 27.22 },
+    'Kırşehir': { lat: 39.14, lon: 34.16 },
+    'Kilis': { lat: 36.71, lon: 37.11 },
+    'Kocaeli': { lat: 40.76, lon: 29.94 },
+    'Konya': { lat: 37.87, lon: 32.48 },
+    'Kütahya': { lat: 39.42, lon: 29.98 },
+    'Malatya': { lat: 38.35, lon: 38.31 },
+    'Manisa': { lat: 38.61, lon: 27.43 },
+    'Mardin': { lat: 37.31, lon: 40.73 },
+    'Mersin': { lat: 36.80, lon: 34.64 },
+    'Muğla': { lat: 37.21, lon: 28.36 },
+    'Muş': { lat: 38.74, lon: 41.49 },
+    'Nevşehir': { lat: 38.62, lon: 34.71 },
+    'Niğde': { lat: 37.96, lon: 34.68 },
+    'Ordu': { lat: 40.98, lon: 37.88 },
+    'Osmaniye': { lat: 37.07, lon: 36.25 },
+    'Rize': { lat: 41.02, lon: 40.52 },
+    'Sakarya': { lat: 40.77, lon: 30.40 },
+    'Samsun': { lat: 41.28, lon: 36.33 },
+    'Siirt': { lat: 37.93, lon: 41.94 },
+    'Sinop': { lat: 42.02, lon: 35.15 },
+    'Sivas': { lat: 39.75, lon: 37.01 },
+    'Şanlıurfa': { lat: 37.16, lon: 38.79 },
+    'Şırnak': { lat: 37.52, lon: 42.45 },
+    'Tekirdağ': { lat: 40.98, lon: 27.51 },
+    'Tokat': { lat: 40.31, lon: 36.55 },
+    'Trabzon': { lat: 41.00, lon: 39.72 },
+    'Tunceli': { lat: 39.10, lon: 39.55 },
+    'Uşak': { lat: 38.68, lon: 29.40 },
+    'Van': { lat: 38.50, lon: 43.38 },
+    'Yalova': { lat: 40.65, lon: 29.27 },
+    'Yozgat': { lat: 39.82, lon: 34.80 },
+    'Zonguldak': { lat: 41.45, lon: 31.79 },
+    'Lefkoşa (KKTC)': { lat: 35.18, lon: 33.38 },
+    'Bakü': { lat: 40.40, lon: 49.86 },
+    'Berlin': { lat: 52.52, lon: 13.40 },
+    'Paris': { lat: 48.85, lon: 2.35 },
+    'Londra': { lat: 51.50, lon: -0.12 },
+    'Amsterdam': { lat: 52.36, lon: 4.90 },
+    'Viyana': { lat: 48.20, lon: 16.37 }
+  },
+
+  normalizeCityLookup(raw) {
+    if (!raw) return null;
+    const clean = String(raw).trim();
+    if (this.TR_PROVINCE_COORDS[clean]) {
+      return { name: clean, ...this.TR_PROVINCE_COORDS[clean] };
+    }
+    const simplify = (s) => String(s).toLowerCase()
+      .replace(/ı/g, 'i').replace(/İ/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+      .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+      .replace(/[^a-z0-9]/g, '');
+    const target = simplify(clean);
+    if (!target) return null;
+    for (const [prov, coords] of Object.entries(this.TR_PROVINCE_COORDS)) {
+      const sp = simplify(prov);
+      if (sp === target || target.includes(sp) || sp.includes(target)) {
+        return { name: prov, ...coords };
+      }
+    }
+    return null;
+  },
+
+  // Gerçek Enlem/Boylam -> Yuvarlak Radar Küresi (0..100%) Matematiksel İzdüşümü
+  projectLatLonToRadar(lat, lon) {
+    const nLat = Number(lat);
+    const nLon = Number(lon);
+    if (!nLat && !nLon) return { x: 40.5, y: 44.8 }; // Varsayılan merkez (Ankara)
+
+    // Türkiye merkezli projeksiyon:
+    // Boylam 26.0 (Çanakkale) -> x=15%, 45.0 (Iğdır/Van doğusu) -> x=85%
+    // Enlem 42.3 (Sinop/Kuzey) -> y=30%, 35.8 (Hatay/Güney) -> y=68%
+    let x = 15 + ((nLon - 26.0) / 19.0) * 70;
+    let y = 30 + ((42.3 - nLat) / 6.5) * 38;
+
+    // Türkiye dışı (Avrupa, Asya, Amerika vb.) noktaları yuvarlak kürenin dış halkasına gerçek yönünde yerleştir
+    const dx = x - 50;
+    const dy = y - 50;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 43) {
+      const scale = 43 / dist;
+      x = 50 + dx * scale;
+      y = 50 + dy * scale;
+    }
+    return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) };
+  },
+
+  // Yuvarlak Radar İçinde Dünya Kıtaları + Çok Belirgin Türkiye Haritası SVG Üretici
+  buildRadarMapSvg() {
+    const pt = (lat, lon) => {
+      const p = this.projectLatLonToRadar(lat, lon);
+      return `${p.x},${p.y}`;
+    };
+    const poly = (coords) => coords.map(([la, lo]) => pt(la, lo)).join(' ');
+
+    // 1. Türkiye Anadolu + Trakya Gerçek Kıyı Sınır Koordinatları
+    const trAnatolia = poly([
+      [40.00, 26.20], [40.35, 26.68], [40.40, 27.80], [40.38, 28.85], [40.72, 29.92],
+      [41.02, 29.05], [41.22, 29.15], [41.15, 30.15], [41.45, 31.78], [41.75, 32.38],
+      [41.98, 33.75], [42.05, 35.15], [41.65, 35.90], [41.30, 36.35], [41.15, 37.25],
+      [40.98, 37.90], [40.92, 38.40], [41.02, 39.72], [41.05, 40.55], [41.42, 41.55],
+      [41.15, 42.75], [40.60, 43.55], [39.95, 44.50], [39.65, 44.80], [38.55, 44.30],
+      [37.35, 44.55], [37.15, 43.30], [37.18, 42.30], [37.08, 41.20], [36.82, 40.05],
+      [36.70, 38.80], [36.65, 37.35], [36.80, 36.60], [35.88, 36.05], [36.28, 35.80],
+      [36.78, 36.15], [36.80, 35.40], [36.75, 34.60], [36.05, 32.85], [36.55, 32.00],
+      [36.88, 30.72], [36.22, 29.65], [36.70, 28.25], [37.03, 27.42], [37.85, 27.25],
+      [38.42, 27.12], [38.65, 26.52], [39.32, 26.68], [39.58, 26.95], [39.48, 26.15]
+    ]);
+    const trThrace = poly([
+      [41.02, 28.95], [41.25, 28.98], [41.88, 28.02], [41.72, 26.55], [40.72, 26.05],
+      [40.05, 26.18], [40.42, 26.75], [40.98, 27.52], [41.00, 28.50]
+    ]);
+    const cyprus = poly([
+      [35.15, 32.30], [35.35, 33.30], [35.65, 34.55], [34.98, 34.05], [34.65, 32.95]
+    ]);
+
+    // 2. Dünya / Çevre Kıtalar (Avrupa, Balkanlar, Karadeniz Kuzeyi, Kafkasya, Orta Doğu / Akdeniz)
+    const europeBalkans = poly([
+      [41.75, 26.50], [42.80, 27.80], [44.50, 28.60], [46.50, 30.50], [49.00, 24.00],
+      [47.50, 18.00], [43.50, 16.00], [40.00, 19.50], [37.80, 23.70], [40.50, 22.90], [40.85, 25.85]
+    ]);
+    const northBlackSea = poly([
+      [46.50, 31.00], [46.00, 33.50], [44.50, 34.20], [45.20, 36.50], [44.60, 38.00],
+      [43.00, 40.50], [41.55, 41.60], [42.50, 44.50], [46.50, 45.00], [48.50, 38.00]
+    ]);
+    const middleEastSouth = poly([
+      [35.85, 35.95], [33.90, 35.50], [31.50, 34.45], [31.20, 32.30], [31.00, 27.00],
+      [30.00, 32.00], [30.50, 44.50], [37.10, 44.50], [37.15, 42.30], [36.70, 38.80]
+    ]);
+
+    // Harita Üzerinde Sabit Coğrafi Referans İlleri
+    const refCities = [
+      { name: 'İSTANBUL', lat: 41.01, lon: 28.97 },
+      { name: 'ANKARA', lat: 39.93, lon: 32.85 },
+      { name: 'İZMİR', lat: 38.42, lon: 27.14 },
+      { name: 'ÇANAKKALE', lat: 40.15, lon: 26.41 },
+      { name: 'BURSA', lat: 40.18, lon: 29.06 },
+      { name: 'ANTALYA', lat: 36.89, lon: 30.71 },
+      { name: 'ADANA', lat: 37.00, lon: 35.32 },
+      { name: 'SAMSUN', lat: 41.28, lon: 36.33 },
+      { name: 'TRABZON', lat: 41.00, lon: 39.72 },
+      { name: 'DİYARBAKIR', lat: 37.91, lon: 40.24 },
+      { name: 'ERZURUM', lat: 39.90, lon: 41.27 },
+      { name: 'VAN', lat: 38.50, lon: 43.38 }
+    ];
+
+    const refMarks = refCities.map(rc => {
+      const p = this.projectLatLonToRadar(rc.lat, rc.lon);
+      return `
+        <circle cx="${p.x}" cy="${p.y}" r="0.65" fill="rgba(251, 191, 36, 0.55)" />
+        <text x="${p.x}" y="${(p.y + 2.3).toFixed(1)}" text-anchor="middle" fill="rgba(226, 232, 240, 0.55)" font-size="2.1" font-weight="700" font-family="sans-serif">${rc.name}</text>
+      `;
+    }).join('');
+
+    return `
+      <svg class="radar-map-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <!-- Dünya Enlem/Boylam Izgarası -->
+        <ellipse cx="50" cy="50" rx="46" ry="26" fill="none" stroke="rgba(56, 189, 248, 0.1)" stroke-width="0.3" stroke-dasharray="1,1" />
+        <ellipse cx="50" cy="50" rx="26" ry="46" fill="none" stroke="rgba(56, 189, 248, 0.1)" stroke-width="0.3" stroke-dasharray="1,1" />
+
+        <!-- Çevre Dünya Kıtaları (Avrupa, Karadeniz Kuzeyi, Orta Doğu) -->
+        <polygon points="${europeBalkans}" fill="rgba(14, 116, 144, 0.16)" stroke="rgba(56, 189, 248, 0.24)" stroke-width="0.35" />
+        <polygon points="${northBlackSea}" fill="rgba(14, 116, 144, 0.14)" stroke="rgba(56, 189, 248, 0.22)" stroke-width="0.35" />
+        <polygon points="${middleEastSouth}" fill="rgba(14, 116, 144, 0.14)" stroke="rgba(56, 189, 248, 0.22)" stroke-width="0.35" />
+
+        <!-- Kıbrıs -->
+        <polygon points="${cyprus}" fill="rgba(16, 185, 129, 0.26)" stroke="#34d399" stroke-width="0.45" />
+
+        <!-- TÜRKİYE HARİTASI (Anadolu + Trakya - Çok Belirgin Vurgulu) -->
+        <polygon points="${trAnatolia}" fill="rgba(16, 185, 129, 0.25)" stroke="#34d399" stroke-width="0.7" />
+        <polygon points="${trThrace}" fill="rgba(16, 185, 129, 0.25)" stroke="#34d399" stroke-width="0.7" />
+
+        <!-- Türkiye Yazısı & İl Referans Noktaları -->
+        <text x="48" y="25" text-anchor="middle" fill="rgba(52, 211, 153, 0.45)" font-size="3.2" font-weight="900" letter-spacing="1.2" font-family="sans-serif">TÜRKİYE RADAR</text>
+        ${refMarks}
+      </svg>
+    `;
+  },
 
   esc(s) {
     if (s === null || s === undefined) return '';
@@ -580,9 +870,27 @@ const AdminApp = {
     return Boolean(u && u.lastSeenAt && (Date.now() - Number(u.lastSeenAt) < 35000));
   },
 
-  // Gerçek GeoIP Çözümleyici (Sallamasyon / rastgele değil, gerçek servis sağlayıcı ve il)
+  // Gerçek GeoIP Çözümleyici (Sallamasyon / rastgele değil, gerçek servis sağlayıcı, il ve gerçek enlem/boylam)
   getGeoInfo(ip, u = {}) {
     const cleanIp = String(ip || '').trim().replace(/^::ffff:/, '');
+    const assignedCity = u && (u.manualGeoCity || u.geoCity);
+    if (assignedCity) {
+      const matched = this.normalizeCityLookup(assignedCity);
+      const cityLabel = matched ? matched.name : assignedCity;
+      return {
+        city: cityLabel,
+        region: u.geoRegion || cityLabel,
+        country: u.geoCountry || 'Türkiye',
+        flag: '🇹🇷',
+        isp: u.geoIsp || (cleanIp === '127.0.0.1' ? 'Yerel Güvenli Hat' : 'İnternet Servis Sağlayıcı'),
+        ping: cleanIp === '127.0.0.1' ? '<1 ms' : '16 ms',
+        isLan: cleanIp === '127.0.0.1',
+        ip: cleanIp || '127.0.0.1',
+        lat: matched ? matched.lat : (Number(u.geoLat) || 39.93),
+        lon: matched ? matched.lon : (Number(u.geoLon) || 32.85)
+      };
+    }
+
     if (!cleanIp || cleanIp === '127.0.0.1' || cleanIp === '::1' || cleanIp === 'localhost' || cleanIp === '—' || cleanIp.startsWith('192.168.') || cleanIp.startsWith('10.') || cleanIp.startsWith('172.16.')) {
       return {
         city: 'Bu Bilgisayar / Yerel Ağ',
@@ -592,7 +900,9 @@ const AdminApp = {
         isp: 'Yerel Güvenli Hat',
         ping: '<1 ms',
         isLan: true,
-        ip: cleanIp || '127.0.0.1'
+        ip: cleanIp || '127.0.0.1',
+        lat: 39.93,
+        lon: 32.85
       };
     }
 
@@ -600,37 +910,29 @@ const AdminApp = {
       return this._geoCache[cleanIp];
     }
 
-    if (u.geoCity) {
-      const info = {
-        city: u.geoCity,
-        region: u.geoRegion || u.geoCity,
-        country: u.geoCountry || 'Türkiye',
-        flag: '🇹🇷',
-        isp: u.geoIsp || 'İnternet Servis Sağlayıcı',
-        ping: '18 ms',
-        isLan: false,
-        ip: cleanIp
-      };
-      this._geoCache[cleanIp] = info;
-      return info;
-    }
-
-    // Gerçek GeoIP API sorgusu
+    // Gerçek HTTPS GeoIP API sorgusu (HTTPS & HTTP uyumlu)
     if (!this._geoResolving[cleanIp]) {
       this._geoResolving[cleanIp] = true;
-      fetch('http://ip-api.com/json/' + cleanIp + '?lang=tr')
+      fetch('https://ipwho.is/' + encodeURIComponent(cleanIp))
         .then(res => res.json())
         .then(data => {
-          if (data && data.status === 'success') {
+          if (data && data.success !== false && (data.city || data.region)) {
+            const rawCity = data.region || data.city || 'Türkiye';
+            const matched = this.normalizeCityLookup(rawCity) || this.normalizeCityLookup(data.city);
+            const finalCity = matched ? matched.name : rawCity;
+            const finalLat = matched ? matched.lat : (Number(data.latitude) || 39.93);
+            const finalLon = matched ? matched.lon : (Number(data.longitude) || 32.85);
             this._geoCache[cleanIp] = {
-              city: data.city || data.regionName || 'Türkiye',
-              region: data.regionName || data.city || '',
+              city: finalCity,
+              region: data.region || finalCity,
               country: data.country || 'Türkiye',
-              flag: '🇹🇷',
-              isp: data.isp || data.org || 'İnternet Servis Sağlayıcı',
+              flag: (data.country_code === 'TR' || !data.country_code) ? '🇹🇷' : '🌍',
+              isp: (data.connection && (data.connection.isp || data.connection.org)) || 'İnternet Servis Sağlayıcı',
               ping: '18 ms',
               isLan: false,
-              ip: cleanIp
+              ip: cleanIp,
+              lat: finalLat,
+              lon: finalLon
             };
             setTimeout(() => { if (this.view === 'users') this.render(); }, 100);
           }
@@ -644,7 +946,9 @@ const AdminApp = {
             isp: 'Harici IP',
             ping: '—',
             isLan: false,
-            ip: cleanIp
+            ip: cleanIp,
+            lat: 39.93,
+            lon: 32.85
           };
         });
     }
@@ -657,7 +961,9 @@ const AdminApp = {
       isp: 'Çözümleniyor...',
       ping: '—',
       isLan: false,
-      ip: cleanIp
+      ip: cleanIp,
+      lat: 39.93,
+      lon: 32.85
     };
   },
 
@@ -1186,70 +1492,100 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     const expiringCnt = expiringUsers.length;
     const expiredCnt = expiredUsers.length;
 
-    // Gerçek Şehir & Coğrafi Gruplama (Gerçek verilerle)
+    // Gerçek Şehir & Coğrafi Gruplama (81 İl Gerçek Enlem/Boylam Harita İzdüşümü)
     const onlineUsers = users.filter(u => this.isOnline(u));
+    this.radarScope = this.radarScope || 'all';
+    const radarUsers = this.radarScope === 'online' ? onlineUsers : users;
+
     const cityGroups = {};
-    onlineUsers.forEach(u => {
+    radarUsers.forEach(u => {
       const g = this.getGeoInfo(u.lastIp, u);
       const k = g.city || g.ip;
-      if (!cityGroups[k]) cityGroups[k] = { info: g, users: [] };
+      if (!cityGroups[k]) {
+        cityGroups[k] = { info: g, users: [], onlineCount: 0 };
+      }
       cityGroups[k].users.push(u);
+      if (this.isOnline(u)) cityGroups[k].onlineCount++;
     });
 
-    // Radar Blip Noktaları
-    const blipsHtml = onlineUsers.map((u, i) => {
-      const g = this.getGeoInfo(u.lastIp, u);
-      let h = 0;
-      const str = (u.username || '') + (u.lastIp || '') + i;
-      for (let j = 0; j < str.length; j++) h = (h * 33 + str.charCodeAt(j)) & 0xffffffff;
-      const angle = (Math.abs(h) % 360) * (Math.PI / 180);
-      const radius = 20 + (Math.abs(h >> 4) % 62);
-      const x = 50 + radius * Math.cos(angle);
-      const y = 50 + radius * Math.sin(angle);
+    // Harita Üzerindeki Gerçek Coğrafi Şehir Noktaları (Her şehir kendi gerçek koordinatında ayrı nokta!)
+    const cityEntries = Object.entries(cityGroups);
+    const blipsHtml = cityEntries.map(([city, grp]) => {
+      const pos = this.projectLatLonToRadar(grp.info.lat, grp.info.lon);
+      const isSel = this.selectedGeoCity === city;
+      const hasOnline = grp.onlineCount > 0;
+      const shortCity = city === 'Bu Bilgisayar / Yerel Ağ' ? 'Merkez' : city;
+      const userNames = grp.users.map(u => `${u.username} (${u.lastIp || '127.0.0.1'}:${u.lastPort || 0})`).join(', ');
       return `
-        <div class="radar-blip" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%"
-             title="${this.esc(u.username)} • ${g.flag} ${this.esc(g.city)} • IP: ${this.esc(u.lastIp || '127.0.0.1')}:${this.esc(u.lastPort || 0)} • ISP: ${this.esc(g.isp || '')}"
-             data-radar-uid="${this.esc(u.id)}" data-radar-city="${this.esc(g.city)}"></div>
+        <div class="radar-blip ${hasOnline ? '' : 'offline'} ${isSel ? 'selected' : ''}"
+             style="left:${pos.x}%;top:${pos.y}%"
+             title="📍 ${this.esc(city)} (${grp.users.length} Kullanıcı: ${this.esc(userNames)}) — Detayları görmek için tıklayın"
+             data-city-click="${this.esc(city)}">
+          <span>${grp.users.length}</span>
+          <span class="radar-city-label">${this.esc(shortCity)} (${grp.users.length})</span>
+        </div>
       `;
     }).join('');
 
-    // Şehir dağılım butonları
-    const cityPillsHtml = Object.keys(cityGroups).length ? Object.entries(cityGroups).map(([city, grp]) => `
-      <div class="filter-pill ${this.selectedGeoCity === city ? 'active' : ''}" data-city-click="${this.esc(city)}" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" title="Bu şehirdeki kullanıcıları görmek için tıklayın">
-        <span>${grp.info.flag} ${this.esc(city)}</span>
-        <span style="background:rgba(16,185,129,0.3);padding:1px 6px;border-radius:99px;font-size:11px;color:#fff">${grp.users.length} Aktif</span>
-      </div>
-    `).join('') : '<div class="hint" style="font-size:12px">Şu anda çevrimiçi aktif kullanıcı bekleniyor...</div>';
+    // Sağ Тараftaki Şehir Dağılım Butonları
+    const cityPillsHtml = cityEntries.length ? cityEntries.map(([city, grp]) => {
+      const isSel = this.selectedGeoCity === city;
+      const hasOnline = grp.onlineCount > 0;
+      return `
+        <div class="filter-pill ${isSel ? 'active' : ''}" data-city-click="${this.esc(city)}" style="cursor:pointer;display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-color:${isSel ? '#fbbf24' : (hasOnline ? 'rgba(16,185,129,0.45)' : 'rgba(56,189,248,0.35)')}" title="Tıklayarak ${this.esc(city)} bölgesindeki ${grp.users.length} kullanıcıyı listele">
+          <span>${grp.info.flag} <b>${this.esc(city)}</b></span>
+          <span style="background:${hasOnline ? 'rgba(16,185,129,0.3)' : 'rgba(56,189,248,0.22)'};padding:1px 7px;border-radius:99px;font-size:11px;color:#fff;font-weight:800">
+            ${grp.users.length} Kişi ${grp.onlineCount > 0 ? `(${grp.onlineCount} Canlı)` : ''}
+          </span>
+        </div>
+      `;
+    }).join('') : '<div class="hint" style="font-size:12px">Haritada gösterilecek kullanıcı bulunamadı...</div>';
 
-    // Seçili Şehir Detay Kartı
-    const selGroup = this.selectedGeoCity ? (cityGroups[this.selectedGeoCity] || { info: { flag: '📍', city: this.selectedGeoCity, isp: '' }, users: [] }) : null;
+    // 81 İl Seçim Listesi (Seçenek <option> HTML)
+    const provinceNames = Object.keys(this.TR_PROVINCE_COORDS);
+
+    // Seçili Şehir Detay Kartı (Tıklanan ildeki tüm kullanıcıları detaylı listeler)
+    const selGroup = this.selectedGeoCity ? (cityGroups[this.selectedGeoCity] || null) : null;
     const selCardHtml = selGroup ? `
-      <div class="panel" style="border:2px solid #10b981;background:rgba(16,185,129,0.06);margin-bottom:14px;padding:16px 20px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="panel" style="border:2px solid #10b981;background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(15,23,42,0.95));margin-bottom:14px;padding:16px 20px;box-shadow:0 8px 25px rgba(0,0,0,0.4)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
           <div>
             <h3 style="margin:0;color:#34d399;font-size:16px;display:flex;align-items:center;gap:8px">
               <span>${selGroup.info.flag}</span>
-              <span>${this.esc(this.selectedGeoCity)} - Bu Bölgeden Bağlı Kullanıcılar (${selGroup.users.length})</span>
+              <span>📍 ${this.esc(this.selectedGeoCity)} Bölgesindeki Kullanıcılar — Toplam ${selGroup.users.length} Kişi (${selGroup.onlineCount} Çevrimiçi)</span>
             </h3>
-            <p class="hint" style="margin:2px 0 0;font-size:12px">Kullanıcı kutusuna tıklayarak aşağıdaki listede doğrudan o kullanıcıya odaklanabilirsiniz.</p>
+            <p class="hint" style="margin:3px 0 0;font-size:12px">
+              Koordinat: <code>${Number(selGroup.info.lat || 39.93).toFixed(2)}°K, ${Number(selGroup.info.lon || 32.85).toFixed(2)}°D</code> • Aşağıdaki kartlardan kullanıcıların IP/Port bilgilerini görebilir, tabloda vurgulayabilir veya anında kilitleyebilirsiniz.
+            </p>
           </div>
-          <button class="btn small" id="btn-close-geo-card" style="padding:4px 10px;font-size:12px">✕ Kapat</button>
+          <button class="btn small" id="btn-close-geo-card" style="padding:5px 12px;font-size:12px">✕ Listeyi Kapat</button>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">
-          ${selGroup.users.map(u => {
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">
+          ${selGroup.users.map((u, idx) => {
             const uGeo = this.getGeoInfo(u.lastIp, u);
+            const uOn = this.isOnline(u);
             return `
-              <div class="panel user-jump-card" data-jump-uid="${this.esc(u.id)}" style="margin:0;padding:12px;cursor:pointer;background:var(--bg);border:1px solid rgba(16,185,129,0.3);border-radius:10px" title="Tabloda bu kullanıcıyı vurgulamak için tıklayın">
+              <div class="panel" style="margin:0;padding:13px;background:var(--bg);border:1px solid ${uOn ? 'rgba(16,185,129,0.45)' : 'rgba(56,189,248,0.28)'};border-radius:10px">
                 <div style="display:flex;justify-content:space-between;align-items:center">
-                  <b style="color:#fbbf24;font-size:14px">${this.esc(u.username)}</b>
-                  <span class="tag ok" style="font-size:10px">🟢 Çevrimiçi</span>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <span style="background:rgba(251,191,36,0.18);color:#fbbf24;font-weight:900;font-size:11px;padding:2px 6px;border-radius:6px">#${idx + 1}</span>
+                    <b style="color:#fbbf24;font-size:14.5px">${this.esc(u.username)}</b>
+                  </div>
+                  <span class="tag ${uOn ? 'ok' : ''}" style="font-size:10.5px">${uOn ? '🟢 Çevrimiçi' : '⚪ Çevrimdışı'}</span>
                 </div>
-                <div style="font-size:12px;margin-top:4px;color:var(--fg)">👤 ${this.esc(u.fullName || 'İsimsiz')} • 🖥 ${this.esc(u.hostname || 'Bilinmiyor')}</div>
-                <div style="font-size:11.5px;color:#60a5fa;margin-top:3px;font-family:monospace">🌐 ${this.esc(u.lastIp || '127.0.0.1')}:${this.esc(u.lastPort || 0)}</div>
-                <div style="font-size:11px;color:#94a3b8;margin-top:2px">🏢 ${this.esc(uGeo.isp || 'Yerel Ağ')}</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:3px">📍 ${this.esc(u.currentViewLabel || u.currentView || 'Haberler')}</div>
-                <div style="margin-top:6px;text-align:right">
-                  <span style="font-size:11px;color:#34d399;font-weight:700">👉 Tabloda Vurgula & İncele</span>
+                <div style="font-size:12px;margin-top:6px;color:var(--fg)">👤 <b>Ad Soyad:</b> ${this.esc(u.fullName || 'Belirtilmedi')} • <b>Paket:</b> ${this.esc(u.vipPlan || 'Standart')}</div>
+                <div style="font-size:12px;color:#60a5fa;margin-top:4px;font-family:monospace">🌐 <b>IP : Port:</b> ${this.esc(u.lastIp || '127.0.0.1')}:${this.esc(u.lastPort || 0)}</div>
+                <div style="font-size:11.5px;color:#94a3b8;margin-top:3px">🏢 <b>Operatör / ISP:</b> ${this.esc(uGeo.isp || 'Yerel Ağ')}</div>
+                <div style="font-size:11.5px;color:#cbd5e1;margin-top:3px">🖥 <b>Cihaz:</b> ${this.esc(u.hostname || 'Bilinmiyor')} • <b>Son:</b> ${this.relTime(u.lastSeenAt)}</div>
+                <div style="font-size:11.5px;color:#38bdf8;margin-top:3px">📍 <b>Aktif Sekme:</b> ${this.esc(u.currentViewLabel || u.currentView || 'Haberler')}</div>
+                <div style="font-size:11.5px;color:${u.status === 'active' ? 'var(--green)' : '#fbbf24'};margin-top:3px;font-weight:700">⏱ <b>Kalan Süre:</b> ${this.esc(this.remainingTimeText(u))}</div>
+                <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">
+                  <button class="btn small" data-jump-uid="${this.esc(u.id)}" style="font-size:11px;padding:4px 8px;background:rgba(52,211,153,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.4)">🔍 Tabloda Göster</button>
+                  <button class="btn small" data-inspect-usr="${this.esc(u.id)}" style="font-size:11px;padding:4px 8px;background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.4)">👁️ Kelimeleri</button>
+                  ${u.isLocked
+                    ? `<button class="btn small success" data-quick-user-lock="${this.esc(u.id)}" data-locked="1" style="font-size:11px;padding:4px 8px">🔓 Kilidi Aç</button>`
+                    : `<button class="btn small danger" data-quick-user-lock="${this.esc(u.id)}" data-locked="0" style="font-size:11px;padding:4px 8px">🔒 Kilitle</button>`
+                  }
                 </div>
               </div>
             `;
@@ -1296,10 +1632,11 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
         </div>
       </div>
 
-      <!-- SEÇENEK 2: Canlı Coğrafi Radar & Şehir Dağılımı Kartı -->
+      <!-- SEÇENEK 2: Canlı Coğrafi Radar & Dünya / Türkiye 81 İl Harita Dağılımı Kartı -->
       <div class="radar-card">
         <div class="radar-container">
           <div class="radar-screen">
+            ${this.buildRadarMapSvg()}
             <div class="radar-ring radar-ring-1"></div>
             <div class="radar-ring radar-ring-2"></div>
             <div class="radar-ring radar-ring-3"></div>
@@ -1310,14 +1647,18 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
             ${blipsHtml}
           </div>
           <div style="flex:1;min-width:280px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-              <h2 style="margin:0;font-size:16px;display:flex;align-items:center;gap:6px">
-                <span>🌍 Canlı Coğrafi Radar & Şehir Dağılımı</span>
-                <span class="tag ok" style="font-size:10.5px">Gerçek IP Bağlantısı</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px">
+              <h2 style="margin:0;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span>🌍 Canlı Dünya & Türkiye Coğrafi Radarı</span>
+                <span class="tag ok" style="font-size:10.5px">📍 ${cityEntries.length} Farklı Nokta / İl</span>
               </h2>
+              <div style="display:flex;gap:6px">
+                <button class="btn small ${this.radarScope === 'all' ? 'gold' : ''}" data-radar-scope="all" style="font-size:11px;padding:4px 10px">🗺 Tüm Noktalar (${users.length})</button>
+                <button class="btn small ${this.radarScope === 'online' ? 'success' : ''}" data-radar-scope="online" style="font-size:11px;padding:4px 10px">🟢 Sadece Canlı (${onlineCnt})</button>
+              </div>
             </div>
             <p class="hint" style="margin:0 0 10px 0;font-size:12px">
-              J HABER terminaline bağlanan kullanıcıların gerçek IP adresleri, bağlandıkları il ve internet servis sağlayıcıları haritada canlı eşlenir. İstediğiniz şehre veya radardaki noktaya tıklayarak o bölgedeki kullanıcıları inceleyebilirsiniz.
+              Her il ve bağlantı bölgesi Türkiye haritası üzerindeki <b>gerçek coğrafi koordinatında (Enlem/Boylam)</b> ayrı bir nokta olarak gösterilir. Haritadaki il noktasına veya aşağıdaki şehir kutularına tıklayarak o ildeki tüm kullanıcıları (${cityEntries.map(([c, g]) => `${c}: ${g.users.length}`).join(', ') || '0'}) detaylı listeyebilirsiniz.
             </p>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               ${cityPillsHtml}
@@ -1476,10 +1817,14 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
                         <span class="tag ${on ? 'ok' : ''}">${on ? '🟢 Çevrimiçi' : '⚪ Çevrimdışı'}</span>
                         <code style="font-weight:800;color:#60a5fa">${this.esc(u.lastIp || '127.0.0.1')}:${this.esc(u.lastPort || 0)}</code>
                       </div>
-                      <div style="margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                        <span class="tag" style="background:rgba(59,130,246,0.12);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);font-size:11px" title="Sağlayıcı: ${this.esc(geo.isp)}">
+                      <div style="margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        <span class="tag" style="background:rgba(59,130,246,0.12);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);font-size:11px;cursor:pointer" data-city-click="${this.esc(geo.city)}" title="Haritada ${this.esc(geo.city)} bölgesini aç (Sağlayıcı: ${this.esc(geo.isp)})">
                           ${geo.flag} ${this.esc(geo.city)} <small style="color:#60a5fa">(${geo.ping})</small>
                         </span>
+                        <select data-set-user-city="${this.esc(u.id)}" title="Kullanıcının haritadaki ilini / konumunu seçin veya IP'den otomatik algılatın" style="padding:2px 6px;font-size:10.5px;border-radius:6px;background:rgba(15,23,42,0.85);color:#cbd5e1;border:1px solid rgba(148,163,184,0.3)">
+                          <option value="auto" ${!u.manualGeoCity ? 'selected' : ''}>📡 Otomatik IP (${this.esc(geo.city)})</option>
+                          ${provinceNames.map(pName => `<option value="${this.esc(pName)}" ${(u.manualGeoCity === pName || u.geoCity === pName) ? 'selected' : ''}>📍 ${this.esc(pName)}</option>`).join('')}
+                        </select>
                         ${geo.isp ? `<span class="hint" style="font-size:10.5px;color:#94a3b8">${this.esc(geo.isp)}</span>` : ''}
                       </div>
                       <div class="hint" style="font-size:11px;margin-top:3px">
@@ -1562,12 +1907,39 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     const printPdfBtn = c.querySelector('#btn-print-pdf');
     if (printPdfBtn) printPdfBtn.onclick = () => this.printUsersPdf();
 
-    // Şehir filtresi tıklaması (Radar altındaki rozetler)
+    // Radar kapsam filtresi (Tüm Noktalar / Sadece Canlı)
+    c.querySelectorAll('[data-radar-scope]').forEach(btn => {
+      btn.onclick = () => {
+        this.radarScope = btn.dataset.radarScope;
+        this.render();
+      };
+    });
+
+    // Şehir filtresi ve harita üzerindeki il noktası tıklaması
     c.querySelectorAll('[data-city-click]').forEach(el => {
-      el.onclick = () => {
+      el.onclick = (e) => {
+        e.stopPropagation();
         const city = el.dataset.cityClick;
         this.selectedGeoCity = (this.selectedGeoCity === city) ? null : city;
         this.render();
+      };
+    });
+
+    // Kullanıcının ilini / konumunu tablodan değiştirme
+    c.querySelectorAll('[data-set-user-city]').forEach(sel => {
+      sel.onchange = async () => {
+        const uid = sel.dataset.setUserCity;
+        const val = sel.value;
+        const r = await jadmin.invoke('admin:user-update-access', {
+          userId: uid,
+          geoCity: val === 'auto' ? '' : val
+        });
+        if (r && r.ok) {
+          this.state = r.state;
+          if (val !== 'auto') this.selectedGeoCity = val;
+          this.render();
+          this.toast(val === 'auto' ? '📡 Kullanıcı konumu otomatik IP algılamaya alındı.' : `📍 Kullanıcı harita konumu "${val}" olarak güncellendi.`);
+        }
       };
     });
 
