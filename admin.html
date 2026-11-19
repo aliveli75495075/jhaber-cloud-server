@@ -967,6 +967,39 @@ const AdminApp = {
     };
   },
 
+  customPrompt(titleText, defaultVal = '') {
+    return new Promise((resolve) => {
+      const existing = document.getElementById('jh-custom-prompt-modal');
+      if (existing) existing.remove();
+      const overlay = document.createElement('div');
+      overlay.id = 'jh-custom-prompt-modal';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(2,6,23,0.78);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+      overlay.innerHTML = `
+        <div class="panel" style="max-width:420px;width:100%;margin:0;border:2px solid #fbbf24;background:#0f172a;box-shadow:0 20px 50px rgba(0,0,0,0.8)">
+          <h3 style="margin:0 0 10px 0;color:#fbbf24;font-size:15px">📲 ${this.esc(titleText)}</h3>
+          <input id="jh-cp-input" class="field" style="width:100%;font-size:14px;padding:10px" value="${this.esc(defaultVal)}" placeholder="05321234567">
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+            <button class="btn small" id="jh-cp-cancel">İptal</button>
+            <button class="btn small gold" id="jh-cp-ok">Tamam & Devam Et</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      const inp = document.getElementById('jh-cp-input');
+      const finish = (val) => {
+        overlay.remove();
+        resolve(val);
+      };
+      document.getElementById('jh-cp-cancel').onclick = () => finish(null);
+      document.getElementById('jh-cp-ok').onclick = () => finish(inp.value.trim());
+      inp.onkeydown = (e) => {
+        if (e.key === 'Enter') finish(inp.value.trim());
+        if (e.key === 'Escape') finish(null);
+      };
+      setTimeout(() => inp.focus(), 50);
+    });
+  },
+
   async sendWhatsAppRenewal(userId) {
     const users = this.state.db?.users || [];
     const u = users.find(x => x.id === userId);
@@ -974,7 +1007,7 @@ const AdminApp = {
 
     let phone = String(u.contact || '').trim();
     if (!phone || !/\d{7,}/.test(phone)) {
-      const entered = window.prompt(
+      const entered = await this.customPrompt(
         `"${u.username}" kullanıcısının WhatsApp telefon numarasını girin (Örn: 05321234567):`,
         phone || ''
       );
