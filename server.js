@@ -726,6 +726,162 @@ const server = http.createServer((req, res) => {
           return replyJson(200, { ok: true, state: getFullState() });
         }
 
+        // Kullanıcı Yetki & VIP & Donanım Kilidi Güncelle
+        if (pathname === '/api/admin/user-update-access') {
+          const u = db.users.find(x => x.id === body.userId);
+          if (!u) return replyJson(404, { ok: false, error: 'Kullanıcı bulunamadı.' });
+          if (Array.isArray(body.paidFeatures)) u.paidFeatures = body.paidFeatures;
+          if (body.vipPlan !== undefined) u.vipPlan = body.vipPlan;
+          if (body.verified !== undefined) u.verified = Boolean(body.verified);
+          if (body.deviceLockEnabled !== undefined) {
+            u.deviceLock = {
+              enabled: Boolean(body.deviceLockEnabled),
+              lockedHostname: u.hostname || u.deviceLock?.lockedHostname || ''
+            };
+          }
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // Spor ve Maç Linkleri Kaydet
+        if (pathname === '/api/admin/sports-save') {
+          db.sportsData = {
+            matches: Array.isArray(body.matches) ? body.matches : (db.sportsData?.matches || []),
+            standings: Array.isArray(body.standings) ? body.standings : (db.sportsData?.standings || []),
+            updatedAt: Date.now()
+          };
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // Sol Panel & Sekme Yapısı Kaydet
+        if (pathname === '/api/admin/nav-save') {
+          if (Array.isArray(body.sidebarItems)) db.navConfig.sidebarItems = body.sidebarItems;
+          if (body.subTabs && typeof body.subTabs === 'object') db.navConfig.subTabs = body.subTabs;
+          db.navConfig.updatedAt = Date.now();
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // Özel Sekme Ekle
+        if (pathname === '/api/admin/nav-add-tab') {
+          const cleanLabel = String(body.label || '').trim();
+          if (!cleanLabel) return replyJson(400, { ok: false, error: 'Sekme adı boş olamaz.' });
+          const id = 'custom_' + Date.now();
+          db.navConfig.sidebarItems = db.navConfig.sidebarItems || [];
+          db.navConfig.sidebarItems.push({
+            id,
+            sec: body.sec || 'Akış & Sütunlar',
+            ico: String(body.ico || '📌').trim() || '📌',
+            label: cleanLabel,
+            orange: Boolean(body.orange),
+            visible: true,
+            builtin: false,
+            paid: Boolean(body.paid),
+            customContent: String(body.customContent || '').trim()
+          });
+          db.navConfig.updatedAt = Date.now();
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // Özel Sekme Sil
+        if (pathname === '/api/admin/nav-delete-tab') {
+          db.navConfig.sidebarItems = (db.navConfig.sidebarItems || []).filter(x => x.id !== body.id);
+          db.navConfig.updatedAt = Date.now();
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // Sekmeleri Varsayılana Sıfırla
+        if (pathname === '/api/admin/nav-reset') {
+          db.navConfig.sidebarItems = JSON.parse(JSON.stringify(central.DEFAULT_SIDEBAR_ITEMS || []));
+          db.navConfig.subTabs = JSON.parse(JSON.stringify(central.DEFAULT_SUB_TABS || {}));
+          db.navConfig.updatedAt = Date.now();
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // Doğrudan Kullanıcıya Özel Not Gönder
+        if (pathname === '/api/admin/note-push') {
+          const t = String(body.title || '').trim();
+          const b = String(body.body || '').trim();
+          if (!t && !b) return replyJson(400, { ok: false, error: 'Not başlığı veya metni girin.' });
+          db.adminContent.pushedNotes = db.adminContent.pushedNotes || [];
+          db.adminContent.pushedNotes.unshift({
+            id: 'anote_' + Date.now(),
+            title: t || '👑 Yönetici Notu',
+            body: b,
+            color: body.color || 'yellow',
+            targetUser: String(body.targetUser || '').trim(),
+            fromAdmin: true,
+            createdAt: Date.now()
+          });
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // Not Sil
+        if (pathname === '/api/admin/note-delete') {
+          db.adminContent.pushedNotes = (db.adminContent.pushedNotes || []).filter(n => n.id !== body.id);
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // RSS Kaynağı veya Yıldızlı Kelime Gönder
+        if (pathname === '/api/admin/push-extra') {
+          if (body.kind === 'feed') {
+            if (!body.name || !body.url) return replyJson(400, { ok: false, error: 'Kaynak adı ve RSS adresi gerekli.' });
+            db.adminContent.pushedFeeds = db.adminContent.pushedFeeds || [];
+            db.adminContent.pushedFeeds.push({
+              id: 'pfeed_' + Date.now(),
+              name: String(body.name).trim(),
+              url: String(body.url).trim(),
+              foreign: Boolean(body.foreign),
+              createdAt: Date.now()
+            });
+          } else if (body.kind === 'starkw') {
+            if (!body.word) return replyJson(400, { ok: false, error: 'Yıldızlı kelime gerekli.' });
+            db.adminContent.pushedStarKeywords = db.adminContent.pushedStarKeywords || [];
+            db.adminContent.pushedStarKeywords.push({
+              id: 'pskw_' + Date.now(),
+              word: String(body.word).trim(),
+              sound: body.sound || 'urgent',
+              createdAt: Date.now()
+            });
+          }
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // Destek Talebini Sil
+        if (pathname === '/api/admin/ticket-delete') {
+          db.tickets = (db.tickets || []).filter(x => x.id !== body.ticketId);
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // Sunucu Açık/Kapalı Durumu (Bulut 7/24 Kesintisiz Aktif)
+        if (pathname === '/api/admin/server-toggle') {
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // Tünel Yeniden Başlatma (Bulut 7/24 Aktif)
+        if (pathname === '/api/admin/tunnel-restart') {
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
+        // WhatsApp Dağıtım Paketi İndir / Bilgi Al
+        if (pathname === '/api/admin/make-whatsapp-zip') {
+          return replyJson(200, {
+            ok: true,
+            zipPath: 'J HABER_WhatsApp_Paketi.zip',
+            zipName: 'J HABER_WhatsApp_Paketi.zip',
+            sizeMb: '110.6 MB',
+            tunnelUrl: 'https://jhaber-server.onrender.com'
+          });
+        }
+
         // Logları Temizle
         if (pathname === '/api/admin/logs-clear') {
           db.trafficLogs = [];
