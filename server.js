@@ -215,6 +215,45 @@ const server = http.createServer((req, res) => {
     });
   }
 
+  // 1.5 Otomatik Güncelleme Kontrolü ve İndirme (Client Auto-Updater)
+  const updateDataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
+  if (pathname === '/api/update/check') {
+    const updateMetaPath = path.join(updateDataDir, 'latest_update.json');
+    let meta = { version: '4.0.0', buildTime: 0, asarSize: 0, changelog: '' };
+    if (fs.existsSync(updateMetaPath)) {
+      try { meta = JSON.parse(fs.readFileSync(updateMetaPath, 'utf8')); } catch (_) {}
+    }
+    const clientBuildTime = Number(parsedUrl.query?.buildTime || 0);
+    const asarFile = path.join(updateDataDir, 'latest_app.asar');
+    const hasAsar = fs.existsSync(asarFile);
+    const updateAvailable = Boolean(hasAsar && meta.buildTime && clientBuildTime > 0 && meta.buildTime > clientBuildTime);
+    return replyJson(200, {
+      ok: true,
+      updateAvailable,
+      version: meta.version || '4.0.0',
+      buildTime: meta.buildTime || 0,
+      asarSize: meta.asarSize || (hasAsar ? fs.statSync(asarFile).size : 0),
+      changelog: meta.changelog || 'Yeni özellikler ve performans iyileştirmeleri'
+    });
+  }
+
+  if (pathname === '/api/update/download') {
+    const asarFile = path.join(updateDataDir, 'latest_app.asar');
+    if (!fs.existsSync(asarFile)) {
+      return replyJson(404, { ok: false, error: 'Güncelleme paketi sunucuda bulunamadı.' });
+    }
+    const stat = fs.statSync(asarFile);
+    res.writeHead(200, {
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': stat.size,
+      'Content-Disposition': 'attachment; filename="app.asar"',
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
+    });
+    const stream = fs.createReadStream(asarFile);
+    stream.pipe(res);
+    return;
+  }
+
   // 2. Web Admin Paneli
   if (pathname === '/' || pathname === '/admin') {
     const htmlPath = path.join(__dirname, 'admin.html');
