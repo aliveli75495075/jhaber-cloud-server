@@ -65,6 +65,7 @@ function buildClientSyncPayload(db, user) {
       systemLock: effectiveLock,
       lockedUsers: db.securitySettings?.lockedUsers || {}
     },
+    branding: db.branding || central.DEFAULT_BRANDING,
     sportsData: db.sportsData || { matches: [], standings: [], updatedAt: Date.now() },
     adminContent: {
       posts: filterByUser(db.adminContent?.posts),
@@ -117,6 +118,7 @@ function getFullState() {
       time: now,
       uptime: process.uptime()
     },
+    branding: db.branding || central.DEFAULT_BRANDING,
     adminAuth: {
       adminId: db.adminAuth.adminId || 'J Haber',
       updatedAt: db.adminAuth.updatedAt || 0
@@ -744,6 +746,21 @@ const server = http.createServer((req, res) => {
         }
 
         // Spor ve Maç Linkleri Kaydet
+        // Görünüm & Marka Özelleştirme Kaydet
+        if (pathname === '/api/admin/branding-save') {
+          db.branding = {
+            adminBrandTitle: String(body.adminBrandTitle || db.branding?.adminBrandTitle || 'J HABER YÖNETİM').trim(),
+            adminBrandSubtitle: String(body.adminBrandSubtitle || db.branding?.adminBrandSubtitle || 'Merkez Sunucu Aktif').trim(),
+            clientAppTitle: String(body.clientAppTitle || db.branding?.clientAppTitle || 'J HABER').trim(),
+            clientWelcomeMsg: String(body.clientWelcomeMsg || db.branding?.clientWelcomeMsg || 'Merkez Haber & İstihbarat Portalı').trim(),
+            accentColor: String(body.accentColor || 'gold').trim(),
+            sidebarLabels: { ...(db.branding?.sidebarLabels || {}), ...(body.sidebarLabels || {}) },
+            updatedAt: Date.now()
+          };
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
         if (pathname === '/api/admin/sports-save') {
           db.sportsData = {
             matches: Array.isArray(body.matches) ? body.matches : (db.sportsData?.matches || []),

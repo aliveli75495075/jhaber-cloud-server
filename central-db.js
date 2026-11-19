@@ -1,3 +1,24 @@
+const DEFAULT_BRANDING = {
+  adminBrandTitle: 'J HABER YÖNETİM',
+  adminBrandSubtitle: 'Merkez Sunucu Aktif',
+  clientAppTitle: 'J HABER',
+  clientWelcomeMsg: 'Merkez Haber & İstihbarat Portalı',
+  accentColor: 'gold',
+  sidebarLabels: {
+    users: 'Kullanıcılar & Canlı Trafik',
+    distro: 'Dış Ağ & WhatsApp Dağıtım',
+    sports: 'Spor, Fikstür & Maç Linkleri',
+    killswitch: 'Acil Durum & Sistemi Kilitle',
+    navmgr: 'Sol Panel & Sekme Yönetimi',
+    content: "J HABER'e Yazı & Not Ekle",
+    tickets: 'Gelen Şikayet & Talepler',
+    security: 'Güvenlik Radarı & Loglar',
+    creds: 'ID / Şifre & Sunucu Ayarları',
+    branding: 'Görünüm & Marka Özelleştirme'
+  },
+  updatedAt: Date.now()
+};
+
 'use strict';
 // J HABER Cloud Server - Merkezi Veri Tabanı Modülü
 // Bağımsız ve 7/24 çalışır. Verileri JSON dosyasında kalıcı olarak saklar.
@@ -81,6 +102,7 @@ function createDefaultDb() {
       systemLock: { enabled: false, message: 'Sistem bakım nedeniyle geçici olarak durdurulmuştur.' },
       lockedUsers: {}
     },
+    branding: JSON.parse(JSON.stringify(DEFAULT_BRANDING)),
     sportsData: {
       matches: [
         { id: 'm1', league: 'Trendyol Süper Lig', home: 'Fenerbahçe', away: 'Galatasaray', score: '2 - 1', time: 'MS', date: 'Dün', links: [{ title: '📺 FB - GS Maç Özeti İzle', url: 'https://beinsports.com.tr' }] },
@@ -158,6 +180,7 @@ function loadCentralDb() {
   if (!Array.isArray(db.users)) db.users = [];
   if (!Array.isArray(db.tickets)) db.tickets = [];
   if (!Array.isArray(db.trafficLogs)) db.trafficLogs = [];
+  db.branding = { ...DEFAULT_BRANDING, ...(db.branding || {}) };
   if (!db.sportsData) db.sportsData = def.sportsData;
   if (!db.securitySettings.systemLock) db.securitySettings.systemLock = { enabled: false, message: 'Sistem bakım nedeniyle geçici olarak durdurulmuştur.' };
   if (!db.securitySettings.lockedUsers) db.securitySettings.lockedUsers = {};
@@ -232,6 +255,7 @@ function durationLabel(durationKey, customDays) {
 
 module.exports = {
   DEFAULT_SIDEBAR_ITEMS,
+  DEFAULT_BRANDING,
   DEFAULT_SUB_TABS,
   PAID_FEATURE_CATALOG,
   getCentralDir,

@@ -237,6 +237,9 @@ input, textarea, select, code, pre { user-select: text; }
           <span>🛡</span><span>Güvenlik Radarı & Loglar</span>
           <span class="badge" id="badge-sec" hidden>0</span>
         </button>
+        <button class="nav-btn" data-view="branding" style="color:#a78bfa;font-weight:700">
+          <span>🎨</span><span>Görünüm & Marka Özelleştirme</span>
+        </button>
         <button class="nav-btn" data-view="creds">
           <span>🔐</span><span>ID / Şifre & Sunucu Ayarları</span>
         </button>
@@ -254,6 +257,7 @@ input, textarea, select, code, pre { user-select: text; }
           <h1 id="view-title" style="margin:0;font-size:16px;font-weight:800;color:#fbbf24">👥 Kullanıcılar, Üyelik Onayı & Canlı IP/Port Trafiği</h1>
         </div>
         <div class="row" style="margin:0;gap:10px;align-items:center">
+          <button id="btn-topbar-killswitch" class="btn small" style="font-weight:800;border-radius:8px;padding:6px 14px"></button>
           <button id="btn-server-power" class="btn small" style="font-weight:800;border-radius:8px;padding:6px 14px"></button>
           <span class="tag ok" id="top-online-tag">🟢 0 Çevrimiçi</span>
           <span class="tag warn" id="top-pending-tag">⏳ 0 Onay Bekleyen</span>
@@ -484,7 +488,8 @@ const AdminApp = {
           content: '✍ J HABER Uygulamasına Doğrudan Yazı, Duyuru, Not ve Kaynak Ekle',
           tickets: '💬 Kullanıcı Şikayet ve Talepleri (Yönetici İletişim Merkezi)',
           security: '🛡 Güvenlik Radarı, Yasaklı Kelime Kalkanı & Canlı Trafik Logları',
-          creds: '🔐 Yönetici ID / Şifre Değiştirme & Sunucu Bağlantı Bilgileri'
+          creds: '🔐 Yönetici ID / Şifre Değiştirme & Sunucu Bağlantı Bilgileri',
+          branding: '🎨 Görünüm, Markalama & Menü Kişiselleştirme'
         };
         document.getElementById('view-title').textContent = titles[this.view] || 'J HABER YÖNETİM PANELİ';
         if (this.view !== 'users') {
@@ -506,6 +511,56 @@ const AdminApp = {
   },
 
   updateHeaderAndBadges() {
+
+    // Canlı Üst Bar Acil Kilit Butonu
+    const lock = this.state.db?.securitySettings?.systemLock || { enabled: false, message: '' };
+    const tbLockBtn = document.getElementById('btn-topbar-killswitch');
+    if (tbLockBtn) {
+      if (lock.enabled) {
+        tbLockBtn.className = 'btn success';
+        tbLockBtn.innerHTML = '🔓 SİSTEMİ AÇ';
+        tbLockBtn.title = 'Sistem şu an kilitli! Kilidi açmak için tıklayın.';
+      } else {
+        tbLockBtn.className = 'btn danger';
+        tbLockBtn.innerHTML = '🚨 ACİL KİLİTLE';
+        tbLockBtn.title = 'Tüm kullanıcıları tek tuşla kilitlemek için tıklayın.';
+      }
+      tbLockBtn.onclick = async () => {
+        const next = !lock.enabled;
+        const msg = next ? (prompt('Kullanıcılara gösterilecek kilit mesajı:', lock.message || 'Sistem bakım nedeniyle geçici olarak durdurulmuştur.') || 'Sistem bakım nedeniyle geçici olarak durdurulmuştur.') : '';
+        if (next && msg === null) return;
+        const r = await jadmin.invoke('admin:system-lock', { enabled: next, message: msg });
+        if (r && r.ok) {
+          this.state = r.state;
+          this.updateHeaderAndBadges();
+          this.render();
+          this.toast(next ? '🚨 TÜM SİSTEM KİLİTLENDİ!' : '🟢 SİSTEM KİLİDİ AÇILDI, YAYIN AKTİF!');
+        }
+      };
+    }
+
+    // Kişiselleştirilmiş Başlık ve Menü İsimlerini Uygula
+    const branding = this.state.db?.branding || {};
+    if (branding.adminBrandTitle) {
+      const bTitleEl = document.querySelector('.brand > div > div:first-child');
+      if (bTitleEl) bTitleEl.textContent = branding.adminBrandTitle;
+    }
+    if (branding.adminBrandSubtitle) {
+      const bSubEl = document.getElementById('side-srv-info');
+      if (bSubEl) bSubEl.textContent = branding.adminBrandSubtitle;
+    }
+    if (branding.sidebarLabels) {
+      const labels = branding.sidebarLabels;
+      const navBtns = document.querySelectorAll('#admin-nav [data-view]');
+      navBtns.forEach(btn => {
+        const v = btn.dataset.view;
+        if (labels[v]) {
+          const spanText = btn.querySelectorAll('span')[1];
+          if (spanText) spanText.textContent = labels[v];
+        }
+      });
+    }
+
     if (!this.state) return;
     const users = this.state.db.users || [];
     const tickets = this.state.db.tickets || [];
@@ -599,6 +654,7 @@ const AdminApp = {
     else if (this.view === 'tickets') this.renderTickets(c);
     else if (this.view === 'security') this.renderSecurity(c);
     else if (this.view === 'creds') this.renderCreds(c);
+    else if (this.view === 'branding') this.renderBranding(c);
     c.scrollTop = scrollTop;
   },
 
