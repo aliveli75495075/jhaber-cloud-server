@@ -593,7 +593,7 @@ const server = http.createServer((req, res) => {
             username: uname,
             password: pass,
             fullName: String(body.fullName || '').trim(),
-            contact: '',
+            contact: String(body.contact || '').trim(),
             verified: true,
             status: isPending ? 'pending' : 'active',
             durationKey: isPending ? 'none' : (body.durationKey || '1m'),
@@ -735,6 +735,7 @@ const server = http.createServer((req, res) => {
           if (Array.isArray(body.paidFeatures)) u.paidFeatures = body.paidFeatures;
           if (body.vipPlan !== undefined) u.vipPlan = body.vipPlan;
           if (body.verified !== undefined) u.verified = Boolean(body.verified);
+          if (body.contact !== undefined) u.contact = String(body.contact).trim();
           if (body.deviceLockEnabled !== undefined) {
             u.deviceLock = {
               enabled: Boolean(body.deviceLockEnabled),
