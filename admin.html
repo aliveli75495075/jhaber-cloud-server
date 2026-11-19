@@ -465,7 +465,6 @@ window.jadmin = {
     }
   }
 };
-var jadmin = window.jadmin;
 
 // Canlı Bulut Poller (Her 2 saniyede durumu tazeler)
 setInterval(async () => {
@@ -491,7 +490,7 @@ setInterval(async () => {
 window.addEventListener('DOMContentLoaded', () => {
   const token = localStorage.getItem('jh_admin_token');
   if (token) {
-    jadmin.invoke('admin:get-state').then(r => {
+    window.jadmin.invoke('admin:get-state').then(r => {
       if (r && (r.db || r.server)) {
         AdminApp.loggedIn = true;
         AdminApp.state = r;
@@ -516,7 +515,8 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script>
-'use strict';
+(function() {
+  'use strict';
 // J HABER YÖNETİM PANELİ — Ön Yüz Uygulaması (Canlı Bulut & Masaüstü Tam Entegre)
 
 const jadmin = (typeof window !== 'undefined' && window.jadmin) ? window.jadmin : (typeof globalThis !== 'undefined' ? globalThis.jadmin : null);
@@ -2919,7 +2919,14 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
 };
 
 window.AdminApp = AdminApp;
-window.addEventListener('DOMContentLoaded', () => AdminApp.init());
+
+  window.AdminApp = AdminApp;
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', () => AdminApp.init());
+  } else {
+    AdminApp.init();
+  }
+})();
 
 </script>
 </body>
