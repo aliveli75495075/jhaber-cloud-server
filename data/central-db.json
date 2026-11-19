@@ -17,7 +17,8 @@
     "announcementBanner": "",
     "systemLock": {
       "enabled": false,
-      "message": "Sistem bakım nedeniyle geçici olarak durdurulmuştur."
+      "message": "Sistem bakım nedeniyle geçici olarak durdurulmuştur.",
+      "updatedAt": 1795120226013
     },
     "lockedUsers": {}
   },
@@ -286,6 +287,17 @@
         "visible": true,
         "builtin": true,
         "paid": false
+      },
+      {
+        "id": "custom_coming_soon",
+        "sec": "Akış & Sütunlar",
+        "ico": "⏳",
+        "label": "Yakında Geliyor, Bekle!",
+        "orange": true,
+        "visible": true,
+        "builtin": false,
+        "paid": false,
+        "customContent": "🚀 YAKINDA GELİYOR, BEKLE!\n\nJ HABER kullanıcıları için çok özel yeni modüller ve canlı analiz araçları hazırlanıyor. Çok yakında bu sekmede aktif olacaktır!"
       }
     ],
     "subTabs": {
@@ -360,7 +372,7 @@
         "paid": false
       }
     },
-    "updatedAt": 1795074025094
+    "updatedAt": 1795121030783
   },
   "adminContent": {
     "posts": [
@@ -674,5 +686,25 @@
       "ipPort": "127.0.0.1:54216",
       "detail": "Hatalı kullanıcı adı veya şifre ile giriş denemesi!"
     }
-  ]
+  ],
+  "branding": {
+    "adminBrandTitle": "J HABER YÖNETİM",
+    "adminBrandSubtitle": "Merkez Sunucu Aktif",
+    "clientAppTitle": "J HABER",
+    "clientWelcomeMsg": "Merkez Haber & İstihbarat Portalı",
+    "accentColor": "gold",
+    "sidebarLabels": {
+      "users": "Kullanıcılar & Canlı Trafik",
+      "distro": "Dış Ağ & WhatsApp Dağıtım",
+      "sports": "Spor, Fikstür & Maç Linkleri",
+      "killswitch": "Acil Durum & Sistemi Kilitle",
+      "navmgr": "Sol Panel & Sekme Yönetimi",
+      "content": "J HABER'e Yazı & Not Ekle",
+      "tickets": "Gelen Şikayet & Talepler",
+      "security": "Güvenlik Radarı & Loglar",
+      "creds": "ID / Şifre & Sunucu Ayarları",
+      "branding": "Görünüm & Marka Özelleştirme"
+    },
+    "updatedAt": 1795113743078
+  }
 }

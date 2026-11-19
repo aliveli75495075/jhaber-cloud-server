@@ -61,7 +61,8 @@ const DEFAULT_SIDEBAR_ITEMS = [
   { id: 'notify', sec: 'Yönetim', ico: '🔊', label: 'Bildirim Sesleri & Ayarlar', visible: true, builtin: true, paid: false },
   { id: 'settings', sec: 'Yönetim', ico: '⚙', label: 'Görünüm & Yedek', visible: true, builtin: true, paid: false },
   { id: 'adminposts', sec: 'Yönetim', ico: '📢', label: 'Yönetici Duyuru & Yazıları', badge: 'adminposts', visible: true, builtin: true, paid: false },
-  { id: 'support', sec: 'Yönetim', ico: '💬', label: 'Yöneticiyle İletişime Geç', badge: 'support', visible: true, builtin: true, paid: false }
+  { id: 'support', sec: 'Yönetim', ico: '💬', label: 'Yöneticiyle İletişime Geç', badge: 'support', visible: true, builtin: true, paid: false },
+  { id: 'custom_coming_soon', sec: 'Akış & Sütunlar', ico: '⏳', label: 'Yakında Geliyor, Bekle!', orange: true, visible: true, builtin: false, paid: false, customContent: '🚀 YAKINDA GELİYOR, BEKLE!\n\nJ HABER kullanıcıları için çok özel yeni modüller ve canlı analiz araçları hazırlanıyor. Çok yakında bu sekmede aktif olacaktır!' }
 ];
 
 const DEFAULT_SUB_TABS = {
