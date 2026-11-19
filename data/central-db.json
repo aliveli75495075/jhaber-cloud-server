@@ -1,0 +1,678 @@
+{
+  "adminAuth": {
+    "adminId": "J Haber",
+    "password": "123456",
+    "serverPort": 47850,
+    "updatedAt": 1795074025094
+  },
+  "securitySettings": {
+    "requireApproval": true,
+    "watchKeywords": [
+      "şifre",
+      "sızıntı",
+      "hack",
+      "kopyala",
+      "veritabanı"
+    ],
+    "announcementBanner": "",
+    "systemLock": {
+      "enabled": false,
+      "message": "Sistem bakım nedeniyle geçici olarak durdurulmuştur."
+    },
+    "lockedUsers": {}
+  },
+  "sportsData": {
+    "matches": [
+      {
+        "id": "m1",
+        "league": "Trendyol Süper Lig",
+        "home": "Fenerbahçe",
+        "away": "Galatasaray",
+        "score": "2 - 1",
+        "time": "MS",
+        "date": "Dün",
+        "links": [
+          {
+            "title": "📺 FB - GS Maç Özeti İzle",
+            "url": "https://beinsports.com.tr"
+          }
+        ]
+      },
+      {
+        "id": "m2",
+        "league": "Trendyol Süper Lig",
+        "home": "Beşiktaş",
+        "away": "Trabzonspor",
+        "score": "1 - 1",
+        "time": "MS",
+        "date": "Dün",
+        "links": [
+          {
+            "title": "📺 BJK - TS Maç Özeti İzle",
+            "url": "https://beinsports.com.tr"
+          }
+        ]
+      }
+    ],
+    "standings": [
+      {
+        "rank": 1,
+        "team": "Galatasaray",
+        "p": 12,
+        "pts": 31
+      },
+      {
+        "rank": 2,
+        "team": "Fenerbahçe",
+        "p": 12,
+        "pts": 29
+      },
+      {
+        "rank": 3,
+        "team": "Samsunspor",
+        "p": 12,
+        "pts": 25
+      },
+      {
+        "rank": 4,
+        "team": "Beşiktaş",
+        "p": 12,
+        "pts": 21
+      }
+    ],
+    "updatedAt": 1795074025094
+  },
+  "navConfig": {
+    "sidebarItems": [
+      {
+        "id": "news",
+        "sec": "Akış & Sütunlar",
+        "ico": "📰",
+        "label": "Haberler",
+        "badge": "news",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "x",
+        "sec": "Akış & Sütunlar",
+        "ico": "𝕏",
+        "label": "X Takibi & Kelimeler",
+        "badge": "x",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "starkw",
+        "sec": "Akış & Sütunlar",
+        "ico": "🌟",
+        "label": "Yıldızlı Anahtar Kelimeler",
+        "badge": "starkw",
+        "orange": true,
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "activenotifs",
+        "sec": "Akış & Sütunlar",
+        "ico": "🔔",
+        "label": "Açık Bildirimler",
+        "badge": "activenotifs",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "intel",
+        "sec": "Akış & Sütunlar",
+        "ico": "⚡",
+        "label": "Özel Analiz & Dosya Merkezi",
+        "badge": "intel",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "agenda",
+        "sec": "Akış & Sütunlar",
+        "ico": "📅",
+        "label": "Son 1 Ay X Gündemi",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "sports",
+        "sec": "Akış & Sütunlar",
+        "ico": "⚽",
+        "label": "Spor & Canlı Skor / Fikstür",
+        "visible": true,
+        "builtin": true,
+        "paid": false,
+        "minRole": "normal"
+      },
+      {
+        "id": "keywords",
+        "sec": "Akış & Sütunlar",
+        "ico": "🔑",
+        "label": "Anahtar Kelimeler",
+        "badge": "keywords",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "groups",
+        "sec": "Akış & Sütunlar",
+        "ico": "🗂",
+        "label": "Kaynak Grupları",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "starred",
+        "sec": "Akış & Sütunlar",
+        "ico": "⭐",
+        "label": "Favoriler",
+        "badge": "starred",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "saved",
+        "sec": "Akış & Sütunlar",
+        "ico": "🔖",
+        "label": "Kaydedilenler",
+        "badge": "saved",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "search",
+        "sec": "Araçlar",
+        "ico": "🔍",
+        "label": "Görsel & Birleşik Arama",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "trends",
+        "sec": "Araçlar",
+        "ico": "📈",
+        "label": "Kelime Yoğunluk Grafiği",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "arindir",
+        "sec": "Araçlar",
+        "ico": "🧹",
+        "label": "Arındır Filtresi",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "notes",
+        "sec": "Araçlar",
+        "ico": "📝",
+        "label": "Notlar",
+        "badge": "notes",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "calc",
+        "sec": "Araçlar",
+        "ico": "🧮",
+        "label": "Hesap Makinesi",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "sources",
+        "sec": "Yönetim",
+        "ico": "📡",
+        "label": "Kaynaklar & Sağlık",
+        "badge": "sources",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "notify",
+        "sec": "Yönetim",
+        "ico": "🔊",
+        "label": "Bildirim Sesleri & Ayarlar",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "settings",
+        "sec": "Yönetim",
+        "ico": "⚙",
+        "label": "Görünüm & Yedek",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "adminposts",
+        "sec": "Yönetim",
+        "ico": "📢",
+        "label": "Yönetici Duyuru & Yazıları",
+        "badge": "adminposts",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      },
+      {
+        "id": "support",
+        "sec": "Yönetim",
+        "ico": "💬",
+        "label": "Yöneticiyle İletişime Geç",
+        "badge": "support",
+        "visible": true,
+        "builtin": true,
+        "paid": false
+      }
+    ],
+    "subTabs": {
+      "news_grid": {
+        "id": "news_grid",
+        "parent": "Haberler",
+        "label": "📰 Canlı Izgara Görünümü (12-14 Kart)",
+        "visible": true,
+        "paid": false
+      },
+      "news_deck": {
+        "id": "news_deck",
+        "parent": "Haberler",
+        "label": "▥ TweetDeck Sütunları (10 Sütun)",
+        "visible": true,
+        "paid": false
+      },
+      "x_deck": {
+        "id": "x_deck",
+        "parent": "X Takibi",
+        "label": "▥ X TweetDeck Sütunları",
+        "visible": true,
+        "paid": false
+      },
+      "x_single": {
+        "id": "x_single",
+        "parent": "X Takibi",
+        "label": "⚙ X Oturum & Tekli Akış",
+        "visible": true,
+        "paid": false
+      },
+      "star_single": {
+        "id": "star_single",
+        "parent": "Yıldızlı Kelimeler",
+        "label": "🔥 Tek Sütun (Birleşik Akış)",
+        "visible": true,
+        "paid": false
+      },
+      "star_deck": {
+        "id": "star_deck",
+        "parent": "Yıldızlı Kelimeler",
+        "label": "▥ Sütunlara Böl (TweetDeck)",
+        "visible": true,
+        "paid": false
+      },
+      "intel_combo": {
+        "id": "intel_combo",
+        "parent": "Özel Analiz",
+        "label": "🔗 Birlikte Geçen Kelimeler (VE)",
+        "visible": true,
+        "paid": false
+      },
+      "intel_surge": {
+        "id": "intel_surge",
+        "parent": "Özel Analiz",
+        "label": "🚨 Anormal Gündem Patlaması",
+        "visible": true,
+        "paid": false
+      },
+      "intel_dossier": {
+        "id": "intel_dossier",
+        "parent": "Özel Analiz",
+        "label": "📁 Özel Dosya & Kronolojik Rapor",
+        "visible": true,
+        "paid": false
+      },
+      "intel_ticker": {
+        "id": "intel_ticker",
+        "parent": "Özel Analiz",
+        "label": "📌 Alt Kayan Canlı Bant",
+        "visible": true,
+        "paid": false
+      }
+    },
+    "updatedAt": 1795074025094
+  },
+  "adminContent": {
+    "posts": [
+      {
+        "id": "post_welcome",
+        "title": "J HABER Merkez Yönetim Sistemi Aktif",
+        "category": "Duyuru",
+        "body": "J HABER Yönetim Paneli üzerinden gönderilen anlık duyurular, özel haberler ve yönetici yazıları burada ve haber akışında görüntülenir.",
+        "important": true,
+        "pinnedBanner": false,
+        "showInNewsFeed": true,
+        "targetUser": "",
+        "createdAt": 1795074025094
+      }
+    ],
+    "pushedNotes": [],
+    "pushedFeeds": [],
+    "pushedStarKeywords": [],
+    "broadcastPopup": null
+  },
+  "users": [
+    {
+      "id": "usr_1795089252461_f11x",
+      "username": "bulut_test_1795089252454",
+      "password": "password123",
+      "fullName": "Bulut Test",
+      "contact": "",
+      "verified": false,
+      "status": "pending",
+      "durationKey": "none",
+      "planLabel": "Onay Bekliyor",
+      "vipPlan": "Standart",
+      "paidFeatures": [
+        "starkw",
+        "intel",
+        "x",
+        "agenda",
+        "search",
+        "trends",
+        "export"
+      ],
+      "registeredAt": 1795089252461,
+      "approvedAt": 0,
+      "expiresAt": 0,
+      "lastSeenAt": 1795089252461,
+      "lastIp": "127.0.0.1",
+      "lastPort": 56293,
+      "hostname": "",
+      "osInfo": "",
+      "trafficRequests": 1,
+      "trafficBytes": 88,
+      "currentView": "login_wait",
+      "currentViewLabel": "⏳ Onay Bekleme Ekranı",
+      "currentSubMode": "",
+      "keywords": {
+        "starred": [],
+        "general": [],
+        "xSingle": [],
+        "columns": [],
+        "combos": [],
+        "searchQuery": ""
+      },
+      "recentActions": [
+        {
+          "time": 1795089252461,
+          "text": "Üyelik oluşturuldu (127.0.0.1:56293) — Yönetici onayı ve süre tanımlaması bekleniyor."
+        }
+      ],
+      "securityFlags": [],
+      "deviceLock": {
+        "enabled": false,
+        "lockedHostname": ""
+      },
+      "forceLogoutAt": 0
+    },
+    {
+      "id": "usr_1795082508765_tdir",
+      "username": "ismet",
+      "password": "123456",
+      "fullName": "",
+      "contact": "",
+      "verified": false,
+      "status": "active",
+      "durationKey": "unlimited",
+      "planLabel": "Sınırsız (Ömür Boyu)",
+      "vipPlan": "Standart",
+      "paidFeatures": [
+        "starkw",
+        "intel",
+        "x",
+        "agenda",
+        "search",
+        "trends",
+        "export"
+      ],
+      "approvedAt": 1795082522906,
+      "expiresAt": "unlimited",
+      "registeredAt": 1795082508765,
+      "lastSeenAt": 1795089088059,
+      "lastIp": "127.0.0.1",
+      "lastPort": 54156,
+      "hostname": "prodesk",
+      "osInfo": "win32 10.0.26200 (x64)",
+      "trafficRequests": 1637,
+      "trafficBytes": 3627852,
+      "currentView": "starkw",
+      "currentViewLabel": "🌟 Yıldızlı Anahtar Kelimeler (Haber Siteleri + X Birleşik Takip)",
+      "currentSubMode": "Tek Sütun Birleşik Akış",
+      "keywords": {
+        "starred": [
+          "suç örgütü",
+          "operasyon",
+          "sondakika",
+          "ankara yürüyüş",
+          "ankara toplanma",
+          "ankara eylem",
+          "ankara polis",
+          "ankara son dakika",
+          "cumhurbaşkanı"
+        ],
+        "general": [
+          "EMEP",
+          "SAADET PARTİSİ",
+          "YENİDEN REFAH PARTİSİ",
+          "ZAFER PARTİSİ",
+          "İŞÇİ PARTİSİ",
+          "TKP",
+          "İYİ PARTİ",
+          "MHP",
+          "YENİ PARTİ",
+          "CHP",
+          "AK PARTİ",
+          "DEM PARTİ",
+          "ANKARA GÜNDEM",
+          "CUMHURBAŞKANI",
+          "OKUL SALDIRI",
+          "OPERASYON",
+          "C31K",
+          "ANKARA SON DAKİKA",
+          "TOPLANMA",
+          "YÜRÜYÜŞ",
+          "ANKARA EYLEM",
+          "ANKARA POLİS"
+        ],
+        "xSingle": [],
+        "columns": [
+          "Haber: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika",
+          "Haber: eylem: eylem",
+          "İstihbarata çalışanlar: İstihbarata çalışanlar",
+          "İlişkili: son dakika: son dakika",
+          "Kelime: OPERASYON: OPERASYON",
+          "Kelime: YÜRÜYÜŞ: YÜRÜYÜŞ",
+          "BAHİS: YASA DIŞI BAHİS",
+          "Kelime: CUMHURBAŞKANI: CUMHURBAŞKANI",
+          "SUÇ ÖRGÜTÜ: YENİ NESİL SUÇ ÖRGÜTÜ",
+          "Kelime: ANKARA SON DAKİKA: ANKARA SON DAKİKA",
+          "Kelime: C31K: C31K",
+          "Kelime: OKUL SALDIRI: OKUL SALDIRI",
+          "Kelime: ANKARA EYLEM: ANKARA EYLEM",
+          "Kelime: ANKARA GÜNDEM: ANKARA GÜNDEM",
+          "Kelime: AK PARTİ: AK PARTİ",
+          "Kelime: YENİ PARTİ: YENİ PARTİ",
+          "Kelime: CHP: CHP",
+          "Kelime: MHP: MHP",
+          "Kelime: DEM PARTİ: DEM PARTİ",
+          "Kelime: İYİ PARTİ: İYİ PARTİ",
+          "Kelime: TKP: TKP",
+          "X: EMEP: EMEP",
+          "Kelime: ZAFER PARTİSİ: ZAFER PARTİSİ",
+          "Kelime: YENİDEN REFAH PARTİSİ: YENİDEN REFAH PARTİSİ",
+          "X: basın açıklaması: basın açıklaması",
+          "X: programımızı açıklıyoruz: programımızı açıklıyoruz",
+          "X: kadın kolları: kadın kolları",
+          "X: eylem: eylem",
+          "X: kadın hakları: kadın hakları",
+          "X: yürüyüş: yürüyüş",
+          "X: toplanma: toplanma",
+          "🌟 cumhurbaşkanı (Haber + X): cumhurbaşkanı",
+          "🌟 operasyon (Haber + X): operasyon",
+          "🌟 suç örgütü (Haber + X): suç örgütü",
+          "🌟 ankara toplanma (Haber + X): ankara toplanma",
+          "🌟 ankara eylem (Haber + X): ankara eylem",
+          "🌟 ankara polis (Haber + X): ankara polis",
+          "🌟 ankara son dakika (Haber + X): ankara son dakika",
+          "🌟 ankara yürüyüş (Haber + X): ankara yürüyüş"
+        ],
+        "combos": [
+          "ankara + operasyon + eylem",
+          "sözcü + kayyum + operasyon"
+        ],
+        "searchQuery": ""
+      },
+      "recentActions": [
+        {
+          "time": 1795088906064,
+          "text": "Sekme değiştirdi: 🌟 Yıldızlı Anahtar Kelimeler (Haber Siteleri + X Birleşik Takip)"
+        },
+        {
+          "time": 1795088879238,
+          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
+        },
+        {
+          "time": 1795082559227,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795082554986,
+          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
+        },
+        {
+          "time": 1795082552643,
+          "text": "Uygulamaya giriş yaptı (127.0.0.1:54156)"
+        },
+        {
+          "time": 1795082551042,
+          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
+        },
+        {
+          "time": 1795082550162,
+          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
+        },
+        {
+          "time": 1795082548748,
+          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
+        },
+        {
+          "time": 1795082545080,
+          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
+        },
+        {
+          "time": 1795082544617,
+          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
+        },
+        {
+          "time": 1795082544273,
+          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
+        },
+        {
+          "time": 1795082544123,
+          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
+        },
+        {
+          "time": 1795082522906,
+          "text": "Yönetici tarafından üyelik ONAYLANDI (Süre: Sınırsız (Ömür Boyu))"
+        },
+        {
+          "time": 1795082512657,
+          "text": "Yönetici tarafından üyelik ONAYLANDI (Süre: 1 Ay (30 Gün))"
+        },
+        {
+          "time": 1795082508765,
+          "text": "Üyelik oluşturuldu (127.0.0.1:54216) — Yönetici onayı ve süre tanımlaması bekleniyor."
+        }
+      ],
+      "securityFlags": [],
+      "deviceLock": {
+        "enabled": false,
+        "lockedHostname": "prodesk"
+      },
+      "forceLogoutAt": 0
+    }
+  ],
+  "tickets": [],
+  "trafficLogs": [
+    {
+      "id": "log_1795089252461_bst0",
+      "time": 1795089252461,
+      "type": "register",
+      "username": "bulut_test_1795089252454",
+      "ipPort": "127.0.0.1:56293",
+      "detail": "Yeni üyelik oluşturuldu (Doğrulanmamış). Onay bekliyor."
+    },
+    {
+      "id": "log_1795082552643_y77t",
+      "time": 1795082552643,
+      "type": "login",
+      "username": "ismet",
+      "ipPort": "127.0.0.1:54156",
+      "detail": "Giriş yapıldı (Durum: active, Paket: Sınırsız (Ömür Boyu))"
+    },
+    {
+      "id": "log_1795082522906_h522",
+      "time": 1795082522906,
+      "type": "approve",
+      "username": "ismet",
+      "ipPort": "127.0.0.1:54216",
+      "detail": "Üyelik onaylandı ve \"Sınırsız (Ömür Boyu)\" kullanım süresi tanımlandı."
+    },
+    {
+      "id": "log_1795082512657_2g0o",
+      "time": 1795082512657,
+      "type": "approve",
+      "username": "ismet",
+      "ipPort": "127.0.0.1:54216",
+      "detail": "Üyelik onaylandı ve \"1 Ay (30 Gün)\" kullanım süresi tanımlandı."
+    },
+    {
+      "id": "log_1795082508765_nmso",
+      "time": 1795082508765,
+      "type": "register",
+      "username": "ismet",
+      "ipPort": "127.0.0.1:54216",
+      "detail": "Yeni üyelik kaydı oluşturdu (Doğrulanmamış / İsteğe Bağlı). Onay bekliyor."
+    },
+    {
+      "id": "log_1795082486255_vz17",
+      "time": 1795082486255,
+      "type": "security",
+      "username": "ismet",
+      "ipPort": "127.0.0.1:54216",
+      "detail": "Hatalı kullanıcı adı veya şifre ile giriş denemesi!"
+    }
+  ]
+}
