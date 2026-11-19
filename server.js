@@ -493,6 +493,19 @@ const server = http.createServer((req, res) => {
           return replyJson(200, getFullState());
         }
 
+        // Çift Yönlü Tam Senkronizasyon (Masaüstü Yönetim Paneli <-> Bulut)
+        if (pathname === '/api/admin/sync-full-db') {
+          if (Array.isArray(body.users)) db.users = body.users;
+          if (Array.isArray(body.tickets)) db.tickets = body.tickets;
+          if (Array.isArray(body.trafficLogs)) db.trafficLogs = body.trafficLogs;
+          if (body.securitySettings) db.securitySettings = body.securitySettings;
+          if (body.sportsData) db.sportsData = body.sportsData;
+          if (body.adminContent) db.adminContent = body.adminContent;
+          if (body.navConfig) db.navConfig = body.navConfig;
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+
         // Kullanıcı Onayla & Süre Ver
         if (pathname === '/api/admin/user-approve') {
           const { userId, durationKey, customDays, vipPlan, paidFeatures } = body;
