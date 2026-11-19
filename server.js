@@ -190,6 +190,12 @@ const server = http.createServer((req, res) => {
 
   // 2. Web Admin Paneli
   if (pathname === '/' || pathname === '/admin') {
+    const htmlPath = path.join(__dirname, 'admin.html');
+    if (fs.existsSync(htmlPath)) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(fs.readFileSync(htmlPath, 'utf8'));
+      return;
+    }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(getAdminHtml());
     return;
@@ -735,7 +741,9 @@ const server = http.createServer((req, res) => {
           if (body.newPassword) db.adminAuth.password = String(body.newPassword).trim();
           db.adminAuth.updatedAt = Date.now();
           central.saveCentralDb(db);
-          return replyJson(200, { ok: true, state: getFullState() });
+          const token = 'jtok_' + crypto.randomBytes(24).toString('hex');
+          adminSessionTokens.add(token);
+          return replyJson(200, { ok: true, token, state: getFullState() });
         }
       }
 

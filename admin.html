@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J HABER — Bulut Yönetim Merkezi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --text: #f9fafb;
+      --text-muted: #9ca3af;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --purple: #8b5cf6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 50px; }
+    
+    header {
+      background: #0f172a; border-bottom: 1px solid var(--card-border);
+      padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo { width: 38px; height: 38px; background: linear-gradient(135deg, #2563eb, #38bdf8); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; }
+    .brand-title { font-size: 17px; font-weight: 700; }
+    .brand-sub { font-size: 12px; color: var(--text-muted); }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .badge-live { display: flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .container { max-width: 1400px; margin: 24px auto; padding: 0 20px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 18px 20px; }
+    .stat-val { font-size: 32px; font-weight: 800; margin: 8px 0; }
+    .stat-label { font-size: 13px; color: var(--text-muted); }
+
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 22px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; border-bottom: 1px solid var(--card-border); padding-bottom: 14px; }
+    .card-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13.5px; }
+    th { color: var(--text-muted); font-weight: 600; padding: 12px 14px; border-bottom: 1px solid var(--card-border); background: #131d2e; }
+    td { padding: 13px 14px; border-bottom: 1px solid #1a2234; vertical-align: middle; }
+    tr:hover { background: rgba(255,255,255,0.02); }
+
+    .tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; }
+    .tag-active { background: rgba(16,185,129,0.2); color: #34d399; }
+    .tag-pending { background: rgba(245,158,11,0.2); color: #fbbf24; }
+    .tag-expired { background: rgba(239,68,68,0.2); color: #f87171; }
+    .tag-vip { background: rgba(139,92,246,0.2); color: #c084fc; font-weight: 700; }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: 0.15s ease; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-success { background: #059669; color: white; }
+    .btn-success:hover { background: #047857; }
+    .btn-danger { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .btn-danger:hover { background: #ef4444; color: white; }
+    .btn-secondary { background: #1f2937; color: #d1d5db; }
+    .btn-secondary:hover { background: #374151; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    select, input, textarea { background: #1e293b; border: 1px solid #334155; color: white; padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; }
+    select:focus, input:focus, textarea:focus { border-color: var(--primary); }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(4px); }
+    .modal { background: #111827; border: 1px solid #374151; border-radius: 16px; padding: 28px; width: 90%; max-width: 480px; }
+  </style>
+</head>
+<body>
+  <!-- Giriş Modalı -->
+  <div id="loginModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div class="brand-logo" style="margin: 0 auto 12px auto; width: 48px; height: 48px; font-size: 24px;">J</div>
+        <h2 style="font-size: 20px; font-weight: 700;">J HABER Bulut Yönetim Girişi</h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Devam etmek için yönetici şifrenizi girin</p>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 13px; margin-bottom: 6px; color: #cbd5e1;">Yönetici Şifresi</label>
+        <input type="password" id="adminPasswordInput" placeholder="Şifrenizi girin (Varsayılan: 123456)" style="width: 100%; font-size: 15px; padding: 10px;" onkeydown="if(event.key==='Enter') doLogin()">
+      </div>
+      <div id="loginErr" style="color: #ef4444; font-size: 13px; margin-bottom: 12px; display: none;"></div>
+      <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 15px;" onclick="doLogin()">Giriş Yap</button>
+    </div>
+  </div>
+
+  <!-- Manuel Kullanıcı Ekleme Modalı -->
+  <div id="addUserModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="card-header" style="margin-bottom: 14px; padding-bottom: 10px;">
+        <div class="card-title">➕ Manuel Kullanıcı Oluştur</div>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('addUserModal').style.display='none'">✕ Kapat</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <label style="display:block; font-size:12px; margin-bottom:4px; color:var(--text-muted);">Kullanıcı Adı *</label>
+          <input type="text" id="nu-user" style="width: 100%;" placeholder="Kullanıcı adı">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; margin-bottom:4px; color:var(--text-muted);">Şifre *</label>
+          <input type="password" id="nu-pass" style="width: 100%;" placeholder="Şifre (en az 4 karakter)">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; margin-bottom:4px; color:var(--text-muted);">Ad Soyad / Kurum</label>
+          <input type="text" id="nu-name" style="width: 100%;" placeholder="İsteğe bağlı">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <label style="display:block; font-size:12px; margin-bottom:4px; color:var(--text-muted);">Kullanım Süresi</label>
+            <select id="nu-dur" style="width: 100%;">
+              <option value="1d">1 Gün</option>
+              <option value="1w">1 Hafta</option>
+              <option value="1m" selected>1 Ay (30 Gün)</option>
+              <option value="3m">3 Ay</option>
+              <option value="1y">1 Yıl</option>
+              <option value="unlimited">Sınırsız (Ömür Boyu)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; margin-bottom:4px; color:var(--text-muted);">Paket Türü</label>
+            <select id="nu-vip" style="width: 100%;">
+              <option value="Standart">Standart</option>
+              <option value="VIP" selected>VIP</option>
+              <option value="Gold">Gold</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-success" style="width: 100%; justify-content: center; padding: 11px; margin-top: 6px;" onclick="saveNewUser()">✓ Kullanıcıyı Oluştur ve Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">J</div>
+      <div>
+        <div class="brand-title">J HABER MERKEZ YÖNETİM SUNUCUSU</div>
+        <div class="brand-sub">7/24 Kesintisiz Bulut Kontrol Portalı</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="badge-live"><div class="dot"></div> CANLI BULUT BAĞLANTISI AKTİF</div>
+      <button class="btn btn-secondary btn-sm" onclick="refreshData()">🔄 Yenile</button>
+      <button class="btn btn-danger btn-sm" onclick="logout()">Çıkış</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- İstatistikler -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Toplam Kayıtlı Kullanıcı</div>
+        <div class="stat-val" id="stTotal">0</div>
+        <div style="font-size: 12px; color: #34d399;">Tüm bilgisayarlar</div>
+      </div>
+      <div class="stat-card" style="border-color: rgba(245,158,11,0.4);">
+        <div class="stat-label" style="color: #fbbf24;">Onay Bekleyenler</div>
+        <div class="stat-val" id="stPending" style="color: #fbbf24;">0</div>
+        <div style="font-size: 12px; color: #fbbf24;">Onay ve süre tanımlaması bekliyor</div>
+      </div>
+      <div class="stat-card" style="border-color: rgba(16,185,129,0.4);">
+        <div class="stat-label" style="color: #34d399;">Şu An Canlı (Online)</div>
+        <div class="stat-val" id="stOnline" style="color: #34d399;">0</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Son 2 dakikada aktif</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Aktif Destek Talepleri</div>
+        <div class="stat-val" id="stTickets" style="color: var(--purple);">0</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Kullanıcı mesajları</div>
+      </div>
+    </div>
+
+    <!-- Onay Bekleyenler Kartı -->
+    <div class="card" id="pendingSection" style="border-color: rgba(245,158,11,0.4);">
+      <div class="card-header">
+        <div class="card-title" style="color: #fbbf24;">⏳ Onay Bekleyen Yeni Üyelikler (<span id="pendingCount">0</span>)</div>
+      </div>
+      <div class="table-responsive">
+        <table id="pendingTable">
+          <thead>
+            <tr>
+              <th>Kullanıcı Adı</th>
+              <th>Ad Soyad / Kurum</th>
+              <th>İletişim</th>
+              <th>Kayıt Zamanı</th>
+              <th>Bilgisayar / IP</th>
+              <th>Süre Seçimi & Onay İşlemi</th>
+            </tr>
+          </thead>
+          <tbody id="pendingTbody">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Onay bekleyen üye bulunmuyor.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tüm Kullanıcılar -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">👥 Tüm Kullanıcılar ve Canlı Durumları</div>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('addUserModal').style.display='flex'">+ Manuel Kullanıcı Ekle</button>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Durum</th>
+              <th>Kullanıcı Adı</th>
+              <th>Paket & Kalan Süre</th>
+              <th>Canlı Konum / Sekme</th>
+              <th>Son IP & Cihaz</th>
+              <th>Yönetici İşlemleri</th>
+            </tr>
+          </thead>
+          <tbody id="usersTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Alt Yönetim Bölümleri: Şifre Değiştirme, Duyuru, Acil Kilit -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px;">
+      
+      <!-- 🔑 YÖNETİCİ ID VE ŞİFRE GÜNCELLEME KARTI -->
+      <div class="card" style="border-color: rgba(59,130,246,0.4);">
+        <div class="card-header">
+          <div class="card-title" style="color: #60a5fa;">🔑 Yönetici ID ve Şifre Güncelleme</div>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+          Giriş bilgilerinizi güncellediğinizde hem bu web paneli hem de bilgisayarınızdaki masaüstü yönetim paneli yeni bilgilerle çalışır.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <label style="display:block; font-size:12px; margin-bottom:4px; color:var(--text-muted);">Mevcut Şifre *</label>
+            <input type="password" id="cpCurPass" placeholder="Şu anki şifreniz" style="width: 100%;">
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; margin-bottom:4px; color:var(--text-muted);">Yeni Yönetici ID *</label>
+            <input type="text" id="cpNewId" value="J Haber" placeholder="Örn: J Haber" style="width: 100%;">
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; margin-bottom:4px; color:var(--text-muted);">Yeni Şifre *</label>
+            <input type="password" id="cpNewPass" placeholder="Yeni şifreniz (en az 4 karakter)" style="width: 100%;">
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; margin-bottom:4px; color:var(--text-muted);">Yeni Şifre Tekrar *</label>
+            <input type="password" id="cpNewPass2" placeholder="Yeni şifrenizi tekrar girin" style="width: 100%;">
+          </div>
+          <button class="btn btn-primary" style="margin-top: 6px; justify-content: center; padding: 11px;" onclick="updateCredentials()">💾 Yeni Bilgileri Kaydet</button>
+        </div>
+      </div>
+
+      <!-- 📢 Anlık Duyuru & Gönderi -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📢 Canlı Duyuru & Bildirim Gönder</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <input type="text" id="postTitle" placeholder="Duyuru Başlığı (Örn: Acil Gelişme / Güncelleme)">
+          <textarea id="postBody" rows="3" placeholder="Duyuru veya haber metni..."></textarea>
+          <div style="display: flex; gap: 10px;">
+            <label style="font-size: 13px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" id="postPinned"> Üst Kayan Bant Olarak Sabitle
+            </label>
+            <label style="font-size: 13px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" id="postNewsFeed" checked> Haber Akışına Ekle
+            </label>
+          </div>
+          <button class="btn btn-primary" style="justify-content: center; padding: 11px;" onclick="sendPost()">Duyuruyu Canlı Yayınla</button>
+        </div>
+      </div>
+
+      <!-- 🛡️ Acil Sistem Kilidi -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🛡️ Acil Bakım & Güvenlik Kilidi</div>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+          Sistem kilidini açtığınızda tüm J HABER kullanıcılarının ekranında kilit mesajı görünür ve uygulama kullanımı geçici olarak durur.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <input type="text" id="lockMsg" value="Sistem bakım nedeniyle geçici olarak durdurulmuştur.">
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-danger" style="flex:1; justify-content: center;" onclick="toggleSystemLock(true)">🔒 SİSTEMİ KİLİTLE</button>
+            <button class="btn btn-success" style="flex:1; justify-content: center;" onclick="toggleSystemLock(false)">🔓 KİLİDİ AÇ</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let adminToken = localStorage.getItem('jh_admin_token') || '';
+    let currentState = null;
+
+    async function req(endpoint, data = {}) {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + adminToken
+        },
+        body: JSON.stringify(data)
+      });
+      if (res.status === 401 || res.status === 403) {
+        showLogin();
+        throw new Error('Oturum süresi doldu veya yetkisiz');
+      }
+      return await res.json();
+    }
+
+    function showLogin() {
+      document.getElementById('loginModal').style.display = 'flex';
+    }
+
+    async function doLogin() {
+      const pass = document.getElementById('adminPasswordInput').value;
+      const errEl = document.getElementById('loginErr');
+      errEl.style.display = 'none';
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pass })
+        });
+        const data = await res.json();
+        if (data.ok && data.token) {
+          adminToken = data.token;
+          localStorage.setItem('jh_admin_token', adminToken);
+          document.getElementById('loginModal').style.display = 'none';
+          renderState(data.state);
+        } else {
+          errEl.innerText = data.error || 'Şifre hatalı!';
+          errEl.style.display = 'block';
+        }
+      } catch (err) {
+        errEl.innerText = 'Bağlantı hatası: ' + err.message;
+        errEl.style.display = 'block';
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('jh_admin_token');
+      adminToken = '';
+      showLogin();
+    }
+
+    async function refreshData() {
+      try {
+        const state = await req('/api/admin/get-state');
+        renderState(state);
+      } catch (_) {}
+    }
+
+    function renderState(st) {
+      if (!st) return;
+      currentState = st;
+
+      document.getElementById('stTotal').innerText = st.stats?.totalUsers || (st.users?.length || 0);
+      document.getElementById('stPending').innerText = st.stats?.pendingUsers || 0;
+      document.getElementById('stOnline').innerText = st.stats?.onlineNow || 0;
+      document.getElementById('stTickets').innerText = st.stats?.openTickets || 0;
+
+      // Bekleyen Üyelikler Tablosu
+      const pendings = (st.users || []).filter(u => u.status === 'pending');
+      document.getElementById('pendingCount').innerText = pendings.length;
+      const ptbody = document.getElementById('pendingTbody');
+      ptbody.innerHTML = '';
+
+      if (pendings.length === 0) {
+        ptbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Şu an onay bekleyen yeni üye bulunmuyor.</td></tr>';
+      } else {
+        pendings.forEach(u => {
+          const tr = document.createElement('tr');
+          
+          const tdUname = document.createElement('td');
+          tdUname.innerHTML = '<strong>' + escapeHtml(u.username) + '</strong>';
+          
+          const tdName = document.createElement('td');
+          tdName.textContent = u.fullName || '—';
+
+          const tdContact = document.createElement('td');
+          tdContact.textContent = u.contact || '—';
+
+          const tdTime = document.createElement('td');
+          tdTime.style.fontSize = '12px';
+          tdTime.style.color = 'var(--text-muted)';
+          tdTime.textContent = new Date(u.registeredAt || Date.now()).toLocaleTimeString();
+
+          const tdHost = document.createElement('td');
+          tdHost.style.fontSize = '12px';
+          tdHost.innerHTML = escapeHtml(u.lastIp || '—') + '<br><span style="color:var(--text-muted)">' + escapeHtml(u.hostname || '') + '</span>';
+
+          const tdAction = document.createElement('td');
+          const actWrap = document.createElement('div');
+          actWrap.style.display = 'flex';
+          actWrap.style.gap = '8px';
+          actWrap.style.alignItems = 'center';
+
+          const selDur = document.createElement('select');
+          selDur.innerHTML = `
+            <option value="1d">1 Gün</option>
+            <option value="3d">3 Gün</option>
+            <option value="1w">1 Hafta</option>
+            <option value="1m" selected>1 Ay (30 Gün)</option>
+            <option value="3m">3 Ay</option>
+            <option value="6m">6 Ay</option>
+            <option value="1y">1 Yıl</option>
+            <option value="unlimited">Sınırsız (Ömür Boyu)</option>
+          `;
+
+          const selVip = document.createElement('select');
+          selVip.innerHTML = `
+            <option value="Standart">Standart</option>
+            <option value="VIP" selected>VIP</option>
+            <option value="Gold">Gold</option>
+            <option value="Kurumsal">Kurumsal</option>
+          `;
+
+          const btnApprove = document.createElement('button');
+          btnApprove.className = 'btn btn-success btn-sm';
+          btnApprove.textContent = '✓ ONAYLA';
+          btnApprove.onclick = async () => {
+            btnApprove.disabled = true;
+            btnApprove.textContent = '⏳ Onaylanıyor...';
+            try {
+              const res = await req('/api/admin/user-approve', {
+                userId: u.id,
+                durationKey: selDur.value,
+                vipPlan: selVip.value
+              });
+              if (res.ok) {
+                alert('✓ "' + u.username + '" başarıyla onaylandı ve ' + selDur.options[selDur.selectedIndex].text + ' süre tanımlandı!');
+                renderState(res.state);
+              } else {
+                alert('Hata: ' + (res.error || 'İşlem başarısız'));
+                btnApprove.disabled = false;
+                btnApprove.textContent = '✓ ONAYLA';
+              }
+            } catch (err) {
+              alert('Hata: ' + err.message);
+              btnApprove.disabled = false;
+              btnApprove.textContent = '✓ ONAYLA';
+            }
+          };
+
+          const btnDelete = document.createElement('button');
+          btnDelete.className = 'btn btn-danger btn-sm';
+          btnDelete.textContent = 'Sil';
+          btnDelete.onclick = async () => {
+            if (!confirm('"' + u.username + '" kullanıcısının başvurusunu silmek istediğinizden emin misiniz?')) return;
+            const res = await req('/api/admin/user-delete', { userId: u.id });
+            if (res.ok) renderState(res.state);
+          };
+
+          actWrap.appendChild(selDur);
+          actWrap.appendChild(selVip);
+          actWrap.appendChild(btnApprove);
+          actWrap.appendChild(btnDelete);
+          tdAction.appendChild(actWrap);
+
+          tr.appendChild(tdUname);
+          tr.appendChild(tdName);
+          tr.appendChild(tdContact);
+          tr.appendChild(tdTime);
+          tr.appendChild(tdHost);
+          tr.appendChild(tdAction);
+          ptbody.appendChild(tr);
+        });
+      }
+
+      // Tüm Kullanıcılar Tablosu
+      const utbody = document.getElementById('usersTbody');
+      utbody.innerHTML = '';
+      (st.users || []).forEach(u => {
+        const isOnline = u.isOnline;
+        let statusTag = '';
+        if (u.status === 'active') statusTag = '<span class="tag tag-active">Aktif</span>';
+        else if (u.status === 'pending') statusTag = '<span class="tag tag-pending">Onay Bekliyor</span>';
+        else if (u.status === 'expired') statusTag = '<span class="tag tag-expired">Süresi Doldu</span>';
+        else statusTag = '<span class="tag">' + escapeHtml(u.status) + '</span>';
+
+        let remaining = '—';
+        if (u.status === 'active') {
+          if (u.expiresAt === 'unlimited') remaining = 'Sınırsız (Ömür Boyu)';
+          else if (Number(u.expiresAt) > 0) {
+            const diff = Number(u.expiresAt) - Date.now();
+            const days = Math.ceil(diff / (24*3600*1000));
+            remaining = days > 0 ? (days + ' Gün Kaldı') : 'Süre Doldu';
+          }
+        }
+
+        const tr = document.createElement('tr');
+
+        const tdStatus = document.createElement('td');
+        tdStatus.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: ${isOnline ? '#10b981' : '#4b5563'};"></div>
+            ${statusTag}
+          </div>
+        `;
+
+        const tdUser = document.createElement('td');
+        tdUser.innerHTML = `
+          <strong>${escapeHtml(u.username)}</strong>
+          <span class="tag tag-vip" style="margin-left: 6px;">${escapeHtml(u.vipPlan || 'Standart')}</span>
+          ${u.fullName ? `<div style="font-size: 12px; color: var(--text-muted);">${escapeHtml(u.fullName)}</div>` : ''}
+        `;
+
+        const tdPlan = document.createElement('td');
+        tdPlan.innerHTML = `
+          <div>${escapeHtml(u.planLabel || '—')}</div>
+          <div style="font-size: 12px; color: #34d399;">${remaining}</div>
+        `;
+
+        const tdView = document.createElement('td');
+        tdView.innerHTML = `
+          <div>${escapeHtml(u.currentViewLabel || u.currentView || '—')}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Son görülme: ${u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleTimeString() : '—'}</div>
+        `;
+
+        const tdIp = document.createElement('td');
+        tdIp.style.fontSize = '12px';
+        tdIp.innerHTML = `${escapeHtml(u.lastIp || '—')}<br><span style="color: var(--text-muted);">${escapeHtml(u.hostname || '')}</span>`;
+
+        const tdActions = document.createElement('td');
+        const actBox = document.createElement('div');
+        actBox.style.display = 'flex';
+        actBox.style.gap = '6px';
+
+        const btnExt = document.createElement('button');
+        btnExt.className = 'btn btn-secondary btn-sm';
+        btnExt.textContent = '⏳ Süre Ver';
+        btnExt.onclick = async () => {
+          const days = prompt('"' + u.username + '" kullanıcısına kaç gün süre eklemek istiyorsunuz? (Örn: 30 gün için 30 yazın)', '30');
+          if (!days) return;
+          const res = await req('/api/admin/user-approve', { userId: u.id, durationKey: 'custom', customDays: Number(days) });
+          if (res.ok) {
+            alert('✓ Kullanıcı süresi güncellendi!');
+            renderState(res.state);
+          }
+        };
+
+        const btnKick = document.createElement('button');
+        btnKick.className = 'btn btn-danger btn-sm';
+        btnKick.textContent = 'Kick';
+        btnKick.onclick = async () => {
+          if (!confirm('"' + u.username + '" kullanıcısının uygulamasındaki açık oturumu sonlandırılsın mı?')) return;
+          const res = await req('/api/admin/user-kick', { userId: u.id });
+          if (res.ok) {
+            alert('✓ Kullanıcı oturumu sonlandırıldı.');
+            renderState(res.state);
+          }
+        };
+
+        const btnDel = document.createElement('button');
+        btnDel.className = 'btn btn-danger btn-sm';
+        btnDel.textContent = 'Sil';
+        btnDel.onclick = async () => {
+          if (!confirm('"' + u.username + '" kullanıcısını tamamen silmek istediğinizden emin misiniz?')) return;
+          const res = await req('/api/admin/user-delete', { userId: u.id });
+          if (res.ok) {
+            alert('✓ Kullanıcı silindi.');
+            renderState(res.state);
+          }
+        };
+
+        actBox.appendChild(btnExt);
+        actBox.appendChild(btnKick);
+        actBox.appendChild(btnDel);
+        tdActions.appendChild(actBox);
+
+        tr.appendChild(tdStatus);
+        tr.appendChild(tdUser);
+        tr.appendChild(tdPlan);
+        tr.appendChild(tdView);
+        tr.appendChild(tdIp);
+        tr.appendChild(tdActions);
+        utbody.appendChild(tr);
+      });
+    }
+
+    // 🔑 YÖNETİCİ ID VE ŞİFRE GÜNCELLEME FONKSİYONU
+    async function updateCredentials() {
+      const cur = document.getElementById('cpCurPass').value;
+      const newId = document.getElementById('cpNewId').value.trim();
+      const newPass = document.getElementById('cpNewPass').value;
+      const newPass2 = document.getElementById('cpNewPass2').value;
+
+      if (!cur) return alert('Lütfen mevcut şifrenizi girin.');
+      if (!newId || newId.length < 2) return alert('Yeni Yönetici ID en az 2 karakter olmalıdır.');
+      if (!newPass || newPass.length < 4) return alert('Yeni şifre en az 4 karakter olmalıdır.');
+      if (newPass !== newPass2) return alert('Girdiğiniz yeni şifreler birbiriyle uyuşmuyor!');
+
+      try {
+        const res = await req('/api/admin/change-credentials', {
+          currentPassword: cur,
+          newAdminId: newId,
+          newPassword: newPass
+        });
+        if (res.ok) {
+          alert('✅ TEBRİKLER! Yönetici ID ve Şifreniz başarıyla güncellendi!\nYeni ID: ' + newId);
+          document.getElementById('cpCurPass').value = '';
+          document.getElementById('cpNewPass').value = '';
+          document.getElementById('cpNewPass2').value = '';
+          // Token ve state güncelle
+          if (res.token) {
+            adminToken = res.token;
+            localStorage.setItem('jh_admin_token', adminToken);
+          }
+          if (res.state) renderState(res.state);
+        } else {
+          alert('Hata: ' + (res.error || 'Şifre güncellenemedi!'));
+        }
+      } catch (err) {
+        alert('Hata: ' + err.message);
+      }
+    }
+
+    async function sendPost() {
+      const title = document.getElementById('postTitle').value.trim();
+      const body = document.getElementById('postBody').value.trim();
+      const pinnedBanner = document.getElementById('postPinned').checked;
+      const showInNewsFeed = document.getElementById('postNewsFeed').checked;
+      if (!title || !body) return alert('Lütfen başlık ve duyuru metnini yazın.');
+
+      const res = await req('/api/admin/post-add', { title, body, pinnedBanner, showInNewsFeed });
+      if (res.ok) {
+        alert('✓ Duyuru tüm kullanıcılara başarıyla yayınlandı!');
+        document.getElementById('postTitle').value = '';
+        document.getElementById('postBody').value = '';
+        renderState(res.state);
+      }
+    }
+
+    async function toggleSystemLock(enabled) {
+      const msg = document.getElementById('lockMsg').value.trim();
+      const action = enabled ? 'SİSTEMİ KİLİTLEMEK' : 'KİLİDİ AÇMAK';
+      if (!confirm(action + ' istediğinizden emin misiniz?')) return;
+      const res = await req('/api/admin/system-lock', { enabled, message: msg });
+      if (res.ok) {
+        alert(enabled ? '🔒 Sistem kilitlendi! Kullanıcıların ekranında bakım uyarısı belirecektir.' : '🔓 Sistem açıldı! Kullanıcılar uygulamaya erişebilir.');
+        renderState(res.state);
+      }
+    }
+
+    async function saveNewUser() {
+      const username = document.getElementById('nu-user').value.trim();
+      const password = document.getElementById('nu-pass').value.trim();
+      const fullName = document.getElementById('nu-name').value.trim();
+      const durationKey = document.getElementById('nu-dur').value;
+      const vipPlan = document.getElementById('nu-vip').value;
+
+      if (!username || !password) return alert('Kullanıcı adı ve şifre zorunludur.');
+      if (password.length < 4) return alert('Şifre en az 4 karakter olmalıdır.');
+
+      const res = await req('/api/admin/user-create', { username, password, fullName, durationKey, vipPlan });
+      if (res.ok) {
+        alert('✓ Kullanıcı "' + username + '" başarıyla oluşturuldu!');
+        document.getElementById('addUserModal').style.display = 'none';
+        document.getElementById('nu-user').value = '';
+        document.getElementById('nu-pass').value = '';
+        document.getElementById('nu-name').value = '';
+        renderState(res.state);
+      } else {
+        alert('Hata: ' + (res.error || 'Oluşturulamadı'));
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]);
+    }
+
+    // Başlangıç
+    if (!adminToken) showLogin();
+    else refreshData();
+    setInterval(refreshData, 3500);
+  </script>
+</body>
+</html>
