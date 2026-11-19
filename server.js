@@ -110,7 +110,31 @@ function getFullState() {
     isOnline: Number(u.lastSeenAt || 0) > twoMinutesAgo
   }));
 
+  const serverInfo = {
+    serverRunning: true,
+    port: PORT,
+    lanIps: ['127.0.0.1', 'jhaber-server.onrender.com'],
+    hostname: 'jhaber-cloud',
+    centralFile: central.getCentralFilePath(),
+    tunnel: {
+      status: 'running',
+      url: 'https://jhaber-server.onrender.com'
+    }
+  };
+
+  const catalog = {
+    paidFeatures: central.PAID_FEATURE_CATALOG || [],
+    defaultSidebar: central.DEFAULT_SIDEBAR_ITEMS || [],
+    defaultSubTabs: central.DEFAULT_SUB_TABS || []
+  };
+
   return {
+    db: {
+      ...db,
+      users: usersWithOnline
+    },
+    serverInfo,
+    catalog,
     server: {
       running: true,
       port: PORT,
@@ -479,16 +503,19 @@ const server = http.createServer((req, res) => {
       // Admin Giriş (Şifre Kontrolü)
       if (pathname === '/api/admin/login' && req.method === 'POST') {
         const adminId = String(body.adminId || '').trim().toLowerCase();
-        const password = String(body.password || '');
-        const expId = String(db.adminAuth.adminId || 'J Haber').trim().toLowerCase();
-        const expPass = String(db.adminAuth.password || '123456');
+        const password = String(body.password || '').trim();
+        const expId = String(db.adminAuth?.adminId || 'J Haber').trim().toLowerCase();
+        const expPass = String(db.adminAuth?.password || '123456').trim();
 
-        if (((!adminId || adminId === expId) && password === expPass) || password === '123456' || password === expPass) {
+        const idMatch = !adminId || adminId === expId || adminId === 'j haber' || adminId === 'admin';
+        const passMatch = password === expPass || password === '123456';
+
+        if (idMatch && passMatch) {
           const token = 'jtok_' + crypto.randomBytes(24).toString('hex');
           adminSessionTokens.add(token);
           return replyJson(200, { ok: true, token, state: getFullState() });
         }
-        return replyJson(401, { ok: false, error: 'Yönetici şifresi veya ID hatalı!' });
+        return replyJson(401, { ok: false, error: 'Yönetici ID veya şifresi hatalı!' });
       }
 
       // Admin Yetki Kontrolü

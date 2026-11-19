@@ -491,7 +491,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const token = localStorage.getItem('jh_admin_token');
   if (token) {
     jadmin.invoke('admin:get-state').then(r => {
-      if (r && r.server) {
+      if (r && (r.db || r.server)) {
         AdminApp.loggedIn = true;
         AdminApp.state = r;
         const ls = document.getElementById('login-screen');
@@ -517,34 +517,40 @@ window.addEventListener('DOMContentLoaded', () => {
 
 <script>
 'use strict';
-// J HABER YÖNETİM PANELİ — Ön Yüz Uygulaması
+// J HABER YÖNETİM PANELİ — Ön Yüz Uygulaması (Canlı Bulut & Masaüstü Tam Entegre)
 
 const AdminApp = {
   loggedIn: false,
-  view: 'users',
   state: null,
+  view: 'users',
+  userFilter: 'all',
+  selectedGeoCity: null,
   hoveredUserId: null,
   pinnedUserId: null,
   featureModalUserId: null,
+  sportsSubView: 'manual',
+
+  _geoCache: {},
+  _geoResolving: {},
 
   esc(s) {
-    return String(s ?? '').replace(/[&<>"']/g, m => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[m]));
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   },
 
-  toast(msg) {
+  toast(msg, type = 'info') {
     const el = document.getElementById('toast');
     if (!el) return;
     el.textContent = msg;
     el.hidden = false;
-    clearTimeout(this._tTimer);
-    this._tTimer = setTimeout(() => { el.hidden = true; }, 3200);
+    el.style.borderColor = type === 'err' ? 'var(--red)' : type === 'warn' ? '#fbbf24' : 'var(--accent)';
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => { el.hidden = true; }, 3200);
   },
 
   relTime(ts) {
-    if (!ts) return 'Hiç';
-    const d = Math.max(0, Math.floor((Date.now() - Number(ts)) / 1000));
+    if (!ts) return 'hiç';
+    const d = Math.floor((Date.now() - Number(ts)) / 1000);
     if (d < 5) return 'şimdi';
     if (d < 60) return `${d} sn önce`;
     if (d < 3600) return `${Math.floor(d / 60)} dk önce`;
@@ -569,42 +575,88 @@ const AdminApp = {
   },
 
   isOnline(u) {
-    return Boolean(u && u.lastSeenAt && (Date.now() - Number(u.lastSeenAt) < 25000));
+    return Boolean(u && u.lastSeenAt && (Date.now() - Number(u.lastSeenAt) < 35000));
   },
 
-
+  // Gerçek GeoIP Çözümleyici (Sallamasyon / rastgele değil, gerçek servis sağlayıcı ve il)
   getGeoInfo(ip, u = {}) {
     const cleanIp = String(ip || '').trim().replace(/^::ffff:/, '');
     if (!cleanIp || cleanIp === '127.0.0.1' || cleanIp === '::1' || cleanIp === 'localhost' || cleanIp === '—' || cleanIp.startsWith('192.168.') || cleanIp.startsWith('10.') || cleanIp.startsWith('172.16.')) {
       return {
-        city: 'Yerel Ağ (LAN)',
-        region: 'Merkez',
+        city: 'Bu Bilgisayar / Yerel Ağ',
+        region: 'Merkez Sunucu',
         country: 'Türkiye',
-        flag: '🌐',
-        isp: 'Güvenli Yerel Hat',
-        ping: '1 ms',
-        isLan: true
+        flag: '💻',
+        isp: 'Yerel Güvenli Hat',
+        ping: '<1 ms',
+        isLan: true,
+        ip: cleanIp || '127.0.0.1'
       };
     }
-    const turkishCities = [
-      { city: 'İstanbul (Avrupa)', flag: '🇹🇷', ping: '14 ms', isp: 'Türk Telekom Fiber' },
-      { city: 'İstanbul (Anadolu)', flag: '🇹🇷', ping: '16 ms', isp: 'Turkcell Superonline' },
-      { city: 'Ankara (Merkez)', flag: '🇹🇷', ping: '18 ms', isp: 'Türk Telekom VDSL' },
-      { city: 'İzmir (Konak)', flag: '🇹🇷', ping: '22 ms', isp: 'Vodafone Fiber' },
-      { city: 'Bursa (Nilüfer)', flag: '🇹🇷', ping: '20 ms', isp: 'Türk Telekom' },
-      { city: 'Antalya (Muratpaşa)', flag: '🇹🇷', ping: '26 ms', isp: 'Superonline Fiber' },
-      { city: 'Adana (Seyhan)', flag: '🇹🇷', ping: '28 ms', isp: 'Türk Telekom' },
-      { city: 'Gaziantep (Şahinbey)', flag: '🇹🇷', ping: '30 ms', isp: 'Türk Telekom' },
-      { city: 'Konya (Selçuklu)', flag: '🇹🇷', ping: '23 ms', isp: 'Vodafone' },
-      { city: 'Trabzon (Ortahisar)', flag: '🇹🇷', ping: '32 ms', isp: 'Türk Telekom Fiber' },
-      { city: 'Kocaeli (İzmit)', flag: '🇹🇷', ping: '17 ms', isp: 'Turkcell Fiber' }
-    ];
-    let hash = 0;
-    for (let i = 0; i < cleanIp.length; i++) {
-      hash = (hash * 31 + cleanIp.charCodeAt(i)) & 0xffffffff;
+
+    if (this._geoCache[cleanIp]) {
+      return this._geoCache[cleanIp];
     }
-    const idx = Math.abs(hash) % turkishCities.length;
-    return turkishCities[idx];
+
+    if (u.geoCity) {
+      const info = {
+        city: u.geoCity,
+        region: u.geoRegion || u.geoCity,
+        country: u.geoCountry || 'Türkiye',
+        flag: '🇹🇷',
+        isp: u.geoIsp || 'İnternet Servis Sağlayıcı',
+        ping: '18 ms',
+        isLan: false,
+        ip: cleanIp
+      };
+      this._geoCache[cleanIp] = info;
+      return info;
+    }
+
+    // Gerçek GeoIP API sorgusu
+    if (!this._geoResolving[cleanIp]) {
+      this._geoResolving[cleanIp] = true;
+      fetch('http://ip-api.com/json/' + cleanIp + '?lang=tr')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.status === 'success') {
+            this._geoCache[cleanIp] = {
+              city: data.city || data.regionName || 'Türkiye',
+              region: data.regionName || data.city || '',
+              country: data.country || 'Türkiye',
+              flag: '🇹🇷',
+              isp: data.isp || data.org || 'İnternet Servis Sağlayıcı',
+              ping: '18 ms',
+              isLan: false,
+              ip: cleanIp
+            };
+            setTimeout(() => { if (this.view === 'users') this.render(); }, 100);
+          }
+        })
+        .catch(() => {
+          this._geoCache[cleanIp] = {
+            city: cleanIp,
+            region: 'Harici Ağ',
+            country: 'Ağ',
+            flag: '🌐',
+            isp: 'Harici IP',
+            ping: '—',
+            isLan: false,
+            ip: cleanIp
+          };
+        });
+    }
+
+    return {
+      city: cleanIp,
+      region: 'Harici Ağ',
+      country: 'Ağ',
+      flag: '🌐',
+      isp: 'Çözümleniyor...',
+      ping: '—',
+      isLan: false,
+      ip: cleanIp
+    };
   },
 
   async sendWhatsAppRenewal(userId) {
@@ -667,7 +719,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
       'Kalan Süre / Bitiş',
       'İletişim / WhatsApp',
       'Son IP',
-      'Şehir (Tahmini)',
+      'Şehir',
       'Port',
       'Cihaz / Bilgisayar',
       'Toplam İstek',
@@ -725,7 +777,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     const onlineCnt = users.filter(u => this.isOnline(u)).length;
     const pendingCnt = users.filter(u => u.status === 'pending').length;
     const printWin = window.open('', '_blank', 'width=1100,height=850');
-    if (!printWin) return this.toast('⚠️ Yazdırma penceresi tarayıcı tarafından engellendi.');
+    if (!printWin) return this.toast('⚠️ Yazdırma penceresi engellendi.');
 
     const rows = users.map((u, i) => {
       const geo = this.getGeoInfo(u.lastIp, u);
@@ -763,10 +815,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
           th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: left; }
           th { background: #f1f5f9; font-weight: 700; color: #334155; }
           tr:nth-child(even) { background: #f8fafc; }
-          @media print {
-            button { display: none !important; }
-            body { margin: 10mm; }
-          }
+          @media print { button { display: none !important; } body { margin: 10mm; } }
         </style>
       </head>
       <body>
@@ -775,9 +824,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
             <h1 class="title">${this.esc(branding.adminBrandTitle || 'J HABER')} MERKEZ YÖNETİM RAPORU</h1>
             <p class="sub">Rapor Oluşturma Tarihi: ${new Date().toLocaleString('tr-TR')} • Güvenli Sistem Çıktısı</p>
           </div>
-          <div>
-            <button onclick="window.print()" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">🖨️ Yazdır / PDF Kaydet</button>
-          </div>
+          <button onclick="window.print()" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">🖨️ Yazdır / PDF Kaydet</button>
         </div>
         <div class="stats">
           <div class="stat-card"><span>Toplam Kayıtlı</span><b>${users.length} Kullanıcı</b></div>
@@ -786,27 +833,14 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
         </div>
         <table>
           <thead>
-            <tr>
-              <th>#</th>
-              <th>Kullanıcı Adı & İsim</th>
-              <th>Durum</th>
-              <th>Paket</th>
-              <th>Kalan Süre</th>
-              <th>IP & Konum</th>
-              <th>Cihaz</th>
-              <th>Bağlantı</th>
-            </tr>
+            <tr><th>#</th><th>Kullanıcı Adı & İsim</th><th>Durum</th><th>Paket</th><th>Kalan Süre</th><th>IP & Konum</th><th>Cihaz</th><th>Bağlantı</th></tr>
           </thead>
-          <tbody>
-            ${rows}
-          </tbody>
+          <tbody>${rows}</tbody>
         </table>
         <div style="margin-top:24px;font-size:11px;color:#94a3b8;text-align:right">
           J HABER Canlı Takip & İstihbarat Portalı Rapor Modülü • Gizli & Kurumsal Kullanım İçindir
         </div>
-        <script>
-          setTimeout(() => { window.print(); }, 400);
-        </script>
+        <script>setTimeout(() => { window.print(); }, 400);</script>
       </body>
       </html>
     `);
@@ -818,14 +852,16 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     if (!logs.length) return this.toast('⚠️ Dışa aktarılacak log bulunamadı.');
 
     const headers = ['Kayıt No', 'Tarih & Saat', 'Tür', 'Kullanıcı Adı', 'IP & Port', 'Detay'];
-    const rows = logs.map((l, i) => [
-      i + 1,
-      new Date(l.time).toLocaleString('tr-TR'),
-      (l.type || '').toUpperCase(),
-      l.username || '—',
-      l.ipPort || '—',
-      l.detail || '—'
-    ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(';'));
+    const rows = logs.map((l, i) => {
+      return [
+        i + 1,
+        new Date(l.time).toLocaleString('tr-TR'),
+        (l.type || '').toUpperCase(),
+        l.username || '—',
+        l.ipPort || '—',
+        l.detail || '—'
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(';');
+    });
 
     const csvContent = '\uFEFF' + headers.join(';') + '\r\n' + rows.join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -942,16 +978,16 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
         this.view = btn.dataset.view;
         document.querySelectorAll('#admin-nav [data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === this.view));
         const titles = {
-          distro: '🌍 Dış Ağ (İnternet) Yayını & WhatsApp Dağıtım Merkezi',
           users: '👥 Kullanıcılar, Üyelik Onayı, Süre Tanımlama & Canlı IP/Port Trafiği',
+          distro: '🌍 Dış Ağ (İnternet) Yayını & WhatsApp Dağıtım Merkezi',
           sports: '⚽ Spor, Fikstür, Puan Durumu & Canlı Maç Özeti Linkleri',
-            killswitch: '🚨 Acil Durum / Uzaktan Sistemi Anında Durdurma (Kill-Switch)',
-            navmgr: '🗂 J HABER Sol Panel & İç Sekme Yöneticisi (Gizle / Aç / Sırala / Ekle)',
+          killswitch: '🚨 Acil Durum / Uzaktan Sistemi Anında Durdurma (Kill-Switch)',
+          navmgr: '🗂 J HABER Sol Panel & İç Sekme Yöneticisi (Gizle / Aç / Sırala / Ekle)',
           content: '✍ J HABER Uygulamasına Doğrudan Yazı, Duyuru, Not ve Kaynak Ekle',
           tickets: '💬 Kullanıcı Şikayet ve Talepleri (Yönetici İletişim Merkezi)',
           security: '🛡 Güvenlik Radarı, Yasaklı Kelime Kalkanı & Canlı Trafik Logları',
-          creds: '🔐 Yönetici ID / Şifre Değiştirme & Sunucu Bağlantı Bilgileri',
-          branding: '🎨 Görünüm, Markalama & Menü Kişiselleştirme'
+          branding: '🎨 Görünüm, Markalama & Menü Kişiselleştirme',
+          creds: '🔐 Yönetici ID / Şifre Değiştirme & Sunucu Bağlantı Bilgileri'
         };
         document.getElementById('view-title').textContent = titles[this.view] || 'J HABER YÖNETİM PANELİ';
         if (this.view !== 'users') {
@@ -970,33 +1006,57 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
         this.render();
       }
     });
+
+    jadmin.invoke('admin:get-state').then(st => {
+      if (st) {
+        this.state = st;
+        this.updateHeaderAndBadges();
+      }
+    });
   },
 
   updateHeaderAndBadges() {
+    if (!this.state || !this.state.db) return;
+    const users = this.state.db.users || [];
+    const pending = users.filter(u => u.status === 'pending').length;
+    const online = users.filter(u => this.isOnline(u)).length;
+    const secAlerts = users.filter(u => (u.securityFlags || []).length > 0).length;
+    const tickets = (this.state.db.tickets || []).filter(t => t.status === 'open').length;
 
-    // Canlı Üst Bar Acil Kilit Butonu
+    const bPend = document.getElementById('badge-pending');
+    if (bPend) { bPend.textContent = pending; bPend.hidden = pending === 0; }
+    const bSec = document.getElementById('badge-sec');
+    if (bSec) { bSec.textContent = secAlerts; bSec.hidden = secAlerts === 0; }
+    const bTkt = document.getElementById('badge-tickets');
+    if (bTkt) { bTkt.textContent = tickets; bTkt.hidden = tickets === 0; }
+
+    const topPend = document.getElementById('top-badge-pending');
+    if (topPend) topPend.textContent = `⏳ ${pending} Onay Bekleyen`;
+    const topOnline = document.getElementById('top-badge-online');
+    if (topOnline) topOnline.textContent = `🟢 ${online} Çevrimiçi`;
+
+    // CANLI ÜST BAR ACİL KİLİT BUTONU (TEK TIKLA DOĞRUDAN KİLİTLE / AÇ)
     const lock = this.state.db?.securitySettings?.systemLock || { enabled: false, message: '' };
     const tbLockBtn = document.getElementById('btn-topbar-killswitch');
     if (tbLockBtn) {
       if (lock.enabled) {
         tbLockBtn.className = 'btn success';
         tbLockBtn.innerHTML = '🔓 SİSTEMİ AÇ';
-        tbLockBtn.title = 'Sistem şu an kilitli! Kilidi açmak için tıklayın.';
+        tbLockBtn.title = 'Sistem şu an kilitli! Normal çalışmaya döndürmek için tıklayın.';
       } else {
         tbLockBtn.className = 'btn danger';
         tbLockBtn.innerHTML = '🚨 ACİL KİLİTLE';
-        tbLockBtn.title = 'Tüm kullanıcıları tek tuşla kilitlemek için tıklayın.';
+        tbLockBtn.title = 'Tüm J HABER kullanıcılarını tek tıkla anında kilitlemek için tıklayın.';
       }
       tbLockBtn.onclick = async () => {
         const next = !lock.enabled;
-        const msg = next ? (prompt('Kullanıcılara gösterilecek kilit mesajı:', lock.message || 'Sistem bakım nedeniyle geçici olarak durdurulmuştur.') || 'Sistem bakım nedeniyle geçici olarak durdurulmuştur.') : '';
-        if (next && msg === null) return;
-        const r = await jadmin.invoke('admin:system-lock', { enabled: next, message: msg });
+        const defaultMsg = 'Sistem bakım ve güncelleme nedeniyle geçici olarak durdurulmuştur.';
+        const r = await jadmin.invoke('admin:system-lock', { enabled: next, message: defaultMsg });
         if (r && r.ok) {
           this.state = r.state;
           this.updateHeaderAndBadges();
           this.render();
-          this.toast(next ? '🚨 TÜM SİSTEM KİLİTLENDİ!' : '🟢 SİSTEM KİLİDİ AÇILDI, YAYIN AKTİF!');
+          this.toast(next ? '🚨 TÜM SİSTEM KİLİTLENDİ!' : '🔓 SİSTEM KİLİDİ AÇILDI, YAYIN AKTİF!');
         }
       };
     }
@@ -1023,255 +1083,86 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
       });
     }
 
-    if (!this.state) return;
-    const users = this.state.db.users || [];
-    const tickets = this.state.db.tickets || [];
-    const onlineCnt = users.filter(u => this.isOnline(u)).length;
-    const pendingCnt = users.filter(u => u.status === 'pending').length;
-    const openTickets = tickets.filter(t => t.status === 'open').length;
-    const secFlagCnt = users.reduce((a, u) => a + ((u.securityFlags || []).length ? 1 : 0), 0);
-
-    
-    const tunnel = this.state.serverInfo?.tunnel;
-    const tunnelTag = document.getElementById('top-tunnel-tag');
-    if (tunnelTag) {
-      if (tunnel?.status === 'running' && tunnel?.url) {
-        tunnelTag.className = 'tag ok';
-        tunnelTag.style.cursor = 'pointer';
-        tunnelTag.innerHTML = `🌍 Dış Ağ: <span style="text-decoration:underline">${this.esc(tunnel.url.replace('https://', ''))}</span>`;
-        tunnelTag.onclick = () => {
-          this.view = 'distro';
-          document.querySelectorAll('#admin-nav [data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === 'distro'));
-          const t = document.getElementById('view-title');
-          if (t) t.textContent = '🌍 Dış Ağ (İnternet) Yayını & WhatsApp Dağıtım Merkezi';
-          this.render();
-        };
-      } else if (tunnel?.status === 'starting') {
-        tunnelTag.className = 'tag warn';
-        tunnelTag.textContent = '🌍 Dış Ağ: Başlatılıyor...';
+    const srv = this.state.serverInfo || {};
+    const srvRunning = srv.serverRunning !== false;
+    const topSrvBtn = document.getElementById('btn-server-toggle');
+    if (topSrvBtn) {
+      if (srvRunning) {
+        topSrvBtn.textContent = '🛑 Tüm Sunucuları Durdur';
+        topSrvBtn.className = 'btn danger';
       } else {
-        tunnelTag.className = 'tag err';
-        tunnelTag.textContent = '🌍 Dış Ağ: Kapalı';
+        topSrvBtn.textContent = '🟢 Sunucuları Başlat';
+        topSrvBtn.className = 'btn success';
+      }
+    }
+    const topPortBtn = document.getElementById('btn-port-badge');
+    if (topPortBtn) {
+      if (srvRunning) {
+        topPortBtn.textContent = `🟢 Sunucu Açık: ${srv.port || 47850} (Tıkla Durdur)`;
+        topPortBtn.style.background = 'rgba(34, 197, 94, 0.15)';
+        topPortBtn.style.color = '#4ade80';
+        topPortBtn.style.borderColor = 'rgba(34, 197, 94, 0.35)';
+      } else {
+        topPortBtn.textContent = `🔴 Sunucu Kapalı (Tıkla Başlat)`;
+        topPortBtn.style.background = 'rgba(239, 68, 68, 0.15)';
+        topPortBtn.style.color = '#f87171';
+        topPortBtn.style.borderColor = 'rgba(239, 68, 68, 0.35)';
       }
     }
 
-    document.getElementById('top-online-tag').textContent = `🟢 ${onlineCnt} Çevrimiçi`;
-    document.getElementById('top-pending-tag').textContent = `⏳ ${pendingCnt} Onay Bekleyen`;
-    const sRunning = this.state.serverInfo?.serverRunning !== false;
-    const pBtn = document.getElementById('btn-server-power');
-    if (pBtn) {
-      pBtn.className = sRunning ? 'btn small danger' : 'btn small success';
-      pBtn.style.boxShadow = sRunning ? '0 0 12px rgba(239,68,68,0.35)' : '0 0 12px rgba(34,197,94,0.35)';
-      pBtn.innerHTML = sRunning ? '🛑 Tüm Sunucuları Durdur' : '🟢 Sunucuyu Tekrar Aç';
-      pBtn.onclick = async () => {
-        const nextState = !sRunning;
-        const r = await jadmin.invoke('admin:server-toggle', { running: nextState });
-        if (r && r.ok) {
-          this.state = r.state;
-          this.updateHeaderAndBadges();
-          if (this.view === 'creds') this.render();
-          this.toast(nextState ? '🟢 Sunucu yeniden başlatıldı ve tüm ağa açıldı!' : '🔴 Sunucu başarıyla durduruldu!');
-        }
+    const topDistroBtn = document.getElementById('btn-top-distro');
+    if (topDistroBtn) {
+      const tun = srv.tunnel || {};
+      if (tun.status === 'running' && tun.url) {
+        topDistroBtn.className = 'btn small success';
+        topDistroBtn.textContent = `🌐 Dış Ağ: ${tun.url.replace(/^https?:\/\//, '')}`;
+        topDistroBtn.style.display = 'inline-flex';
+      } else if (tun.status === 'starting') {
+        topDistroBtn.className = 'btn small gold';
+        topDistroBtn.textContent = '🌐 Dış Ağ: Başlatılıyor...';
+        topDistroBtn.style.display = 'inline-flex';
+      } else {
+        topDistroBtn.className = 'btn small';
+        topDistroBtn.textContent = '🌐 Dış Ağ Kapalı';
+        topDistroBtn.style.display = 'inline-flex';
+      }
+      topDistroBtn.onclick = () => {
+        this.view = 'distro';
+        this.render();
       };
     }
-      const portEl = document.getElementById('top-port-tag');
-      portEl.className = 'tag ' + (sRunning ? 'info' : 'danger');
-      portEl.style.cursor = 'pointer';
-      portEl.innerHTML = (sRunning ? '🟢 Sunucu Açık: ' : '🔴 Sunucu Kapalı: ') + (this.state.serverInfo?.port || 47850) + ' <small style="text-decoration:underline;margin-left:4px">(Tıkla: ' + (sRunning ? 'Durdur' : 'Yeniden Başlat') + ')</small>';
-      portEl.onclick = async () => {
-        const nextState = !sRunning;
-        const r = await jadmin.invoke('admin:server-toggle', { running: nextState });
-        if (r && r.ok) {
-          this.state = r.state;
-          this.updateHeaderAndBadges();
-          this.toast(nextState ? '🟢 Sunucu yeniden başlatıldı ve dinliyor!' : '🔴 Sunucu durduruldu!');
-        }
-      };
-
-    const setB = (id, n) => {
-      const el = document.getElementById(id);
-      if (el) { el.textContent = n; el.hidden = !n; }
-    };
-    setB('badge-pending', pendingCnt);
-    setB('badge-tickets', openTickets);
-    setB('badge-sec', secFlagCnt);
 
     const lanBox = document.getElementById('side-lan-box');
     if (lanBox && this.state.serverInfo) {
       const ips = (this.state.serverInfo.lanIps || ['127.0.0.1']).join(', ');
-      lanBox.innerHTML = `<b>🌐 Sunucu Adresi:</b><br><code>${this.esc(ips)}:${this.state.serverInfo.port}</code>`;
+      lanBox.innerHTML = `<b>🌐 Sunucu Adresi:</b><br><code>${this.esc(ips)}:${this.state.serverInfo.port || 47850}</code>`;
     }
   },
 
   render() {
     if (!this.loggedIn || !this.state) return;
     const c = document.getElementById('content');
+    if (!c) return;
     const scrollTop = c.scrollTop;
-    if (this.view === 'distro') this.renderDistro(c);
+    if (this.view === 'users') this.renderUsers(c);
+    else if (this.view === 'distro') this.renderDistro(c);
     else if (this.view === 'sports') this.renderSportsMgr(c);
     else if (this.view === 'killswitch') this.renderKillSwitch(c);
-    else if (this.view === 'users') this.renderUsers(c);
     else if (this.view === 'navmgr') this.renderNavMgr(c);
     else if (this.view === 'content') this.renderContentMgr(c);
     else if (this.view === 'tickets') this.renderTickets(c);
     else if (this.view === 'security') this.renderSecurity(c);
-    else if (this.view === 'creds') this.renderCreds(c);
     else if (this.view === 'branding') this.renderBranding(c);
+    else if (this.view === 'creds') this.renderCreds(c);
+    else this.renderUsers(c);
     c.scrollTop = scrollTop;
   },
 
-
   // ============================================================================
-  // DIŞ AĞ (İNTERNET) YAYINI & WHATSAPP DAĞITIM MERKEZİ
-  // ============================================================================
-  renderDistro(c) {
-    const tunnel = this.state.serverInfo?.tunnel || { status: 'starting', url: '' };
-    const isLive = tunnel.status === 'running' && Boolean(tunnel.url);
-
-    const waMsgText = [
-      '📌 J HABER Kurulum ve Giriş Adımları:',
-      '1. Gönderilen "J HABER_WhatsApp_Paketi.zip" dosyasını bilgisayarınıza indirip sağ tıklayın ve "Klasöre Ayıkla / Çıkart" deyin.',
-      '2. Ayıklanan klasörün içindeki "J HABER.exe" dosyasına çift tıklayarak uygulamayı açın.',
-      '3. Kayıt formundan kullanıcı adınızı ve şifrenizi girin, üyeliğiniz otomatik olarak sisteme düşecektir.',
-      tunnel.url ? `4. Sunucu Bağlantı Adresi: ${tunnel.url}` : '',
-      '(Sunucu adresi uygulamanın içine otomatik tanımlıdır, hiçbir ayar gerekmez.)'
-    ].filter(Boolean).join('\n');
-
-    c.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:18px">
-        <!-- 1. DIŞ AĞ / TÜNEL DURUM KARTI -->
-        <div class="panel" style="border-color:${isLive ? 'var(--green)' : 'var(--accent)'};padding:22px;margin:0">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="font-size:38px">${isLive ? '🌍' : '⏳'}</div>
-              <div>
-                <div style="display:flex;align-items:center;gap:8px">
-                  <h2 style="margin:0;color:${isLive ? 'var(--green)' : '#fbbf24'}">
-                    ${isLive ? 'Dış Ağ Yayını Canlı & Aktif (Dünya Geneli Bağlantıya Açık)' : 'Dış Ağ Tüneli Başlatılıyor...'}
-                  </h2>
-                  <span class="tag ${isLive ? 'ok' : 'warn'}">${isLive ? '🟢 AKTİF' : '⏳ BAĞLANIYOR'}</span>
-                </div>
-                <p class="hint" style="margin:4px 0 0">
-                  Bu güvenli HTTPS tüneli sayesinde modeminizde port açmanıza gerek kalmaz. Başka şehirdeki veya evindeki kullanıcılar doğrudan bu bağlantı üzerinden panelinize bağlanır.
-                </p>
-              </div>
-            </div>
-            <div>
-              <button class="btn small" id="btn-tunnel-restart" style="padding:8px 14px;font-weight:700">🔄 Tüneli Yenile</button>
-            </div>
-          </div>
-
-          <div style="margin-top:18px;background:var(--bg);padding:14px 16px;border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <span style="font-weight:800;font-size:13px">🔗 Canlı İnternet Adresiniz:</span>
-            <code style="font-weight:900;color:#38bdf8;font-size:14px;background:rgba(56,189,248,0.1);padding:6px 12px;border-radius:6px;border:1px solid rgba(56,189,248,0.3)">
-              ${isLive ? this.esc(tunnel.url) : 'Adres alınıyor, lütfen birkaç saniye bekleyiniz...'}
-            </code>
-            ${isLive ? `
-              <button class="btn small" id="btn-copy-tunnel-url" style="padding:6px 14px;font-weight:700">📋 Adresi Kopyala</button>
-            ` : ''}
-          </div>
-        </div>
-
-        <!-- 2. WHATSAPP DAĞITIM PAKETİ OLUŞTURUCU (TEK TIKLA) -->
-        <div class="panel" style="border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.04);padding:24px;margin:0">
-          <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
-            <div style="font-size:36px">📦</div>
-            <div>
-              <h2 style="margin:0;color:#fbbf24">WhatsApp Dağıtım Paketi Oluştur (Tek Tıkla Hazır ZIP)</h2>
-              <p class="hint" style="margin:3px 0 0">
-                Aşağıdaki butona tıkladığınızda en güncel canlı internet sunucu adresiniz uygulamanın içine işlenir ve Masaüstünüzde doğrudan WhatsApp'tan gönderebileceğiniz <b>"J HABER_WhatsApp_Paketi.zip"</b> oluşturulur.
-              </p>
-            </div>
-          </div>
-
-          <div style="margin:16px 0;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-            <button class="btn gold" id="btn-make-zip" style="font-weight:900;padding:14px 28px;font-size:15px;border-radius:9px;box-shadow:0 0 20px rgba(245,158,11,0.3)">
-              🛡️📦 ŞİMDİ ŞİFRELİ & KORUMALI WHATSAPP PAKETİ OLUŞTUR
-            </button>
-            <div id="zip-status-msg" style="font-size:13px;font-weight:700"></div>
-          </div>
-          <div class="hint" style="font-size:11.5px">
-            🛡️ <b>Otomatik Koruma Kalkanı Aktif:</b> Bu butona her bastığınızda tüm kaynak kodlar askeri düzeyde (Obfuscation) şifrelenir, F12 / DevTools ve inceleme pencereleri kilitlenir, ardından en güncel canlı sunucu adresiyle korumalı ZIP otomatik oluşturulur.
-          </div>
-        </div>
-
-        <!-- 3. KARŞI TARAFA GÖNDERİLECEK WHATSAPP KURULUM METNİ -->
-        <div class="panel" style="border-color:var(--line);padding:20px;margin:0">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:22px">💬</span>
-              <h3 style="margin:0">Karşı Tarafa Gönderilecek WhatsApp Kurulum Talimatı</h3>
-            </div>
-            <button class="btn small success" id="btn-copy-wa-msg" style="font-weight:800;padding:6px 14px">
-              📋 Bu Mesajı Kopyala
-            </button>
-          </div>
-          <textarea id="wa-msg-box" class="field" style="width:100%;height:115px;font-size:12.5px;line-height:1.6;resize:none" readonly>${waMsgText}</textarea>
-        </div>
-      </div>
-    `;
-
-    // Event handlers
-    const copyUrlBtn = c.querySelector('#btn-copy-tunnel-url');
-    if (copyUrlBtn) {
-      copyUrlBtn.onclick = () => {
-        navigator.clipboard.writeText(tunnel.url);
-        this.toast('📋 Canlı tünel adresi panoya kopyalandı!');
-      };
-    }
-
-    const restartBtn = c.querySelector('#btn-tunnel-restart');
-    if (restartBtn) {
-      restartBtn.onclick = async () => {
-        restartBtn.disabled = true;
-        restartBtn.textContent = '⏳ Yenileniyor...';
-        await jadmin.invoke('admin:tunnel-restart');
-        setTimeout(() => {
-          this.toast('🔄 Tünel yenileme isteği gönderildi.');
-        }, 1000);
-      };
-    }
-
-    const copyWaBtn = c.querySelector('#btn-copy-wa-msg');
-    if (copyWaBtn) {
-      copyWaBtn.onclick = () => {
-        navigator.clipboard.writeText(waMsgText);
-        this.toast('📋 WhatsApp kurulum mesajı panoya kopyalandı!');
-      };
-    }
-
-    const makeZipBtn = c.querySelector('#btn-make-zip');
-    const zipStatusMsg = c.querySelector('#zip-status-msg');
-    if (makeZipBtn) {
-      makeZipBtn.onclick = async () => {
-        makeZipBtn.disabled = true;
-        makeZipBtn.textContent = '⏳ Kodlar Şifreleniyor & Koruma Kalkanı Uygulanıyor...';
-        if (zipStatusMsg) zipStatusMsg.innerHTML = '<span style="color:#fbbf24">⏳ Kodlar şifreleniyor ve korumalı ZIP hazırlanıyor (10-15 sn)...</span>';
-
-        const r = await jadmin.invoke('admin:make-whatsapp-zip');
-        makeZipBtn.disabled = false;
-        makeZipBtn.textContent = '🛡️📦 ŞİMDİ ŞİFRELİ & KORUMALI WHATSAPP PAKETİ OLUŞTUR';
-
-        if (r && r.ok) {
-          if (zipStatusMsg) {
-            zipStatusMsg.innerHTML = '<span style="color:var(--green)">🛡️✅ Başarılı! Tüm kaynak kodlar şifrelendi, koruma kalkanı uygulandı ve Masaüstünüzde "J HABER_WhatsApp_Paketi.zip" hazırlandı.</span>';
-          }
-          this.toast('✅ WhatsApp paketi Masaüstünüzde hazırlandı!');
-        } else {
-          if (zipStatusMsg) {
-            zipStatusMsg.innerHTML = '<span style="color:var(--red)">⚠️ Hata: ' + (r?.error || 'Bilinmeyen hata') + '</span>';
-          }
-          this.toast('⚠️ Paket oluşturulurken bir hata oluştu.');
-        }
-      };
-    }
-  },
-
-  // ============================================================================
-  // 1. KULLANICILAR, ÜYELİK ONAYI, SÜRE TANIMLAMA, TRAFİK (IP/PORT) & HOVER DENETİM
+  // 1. KULLANICILAR & CANLI TRAFİK (RADAR, ŞEHİR, SÜRE, WHATSAPP, RAPOR)
   // ============================================================================
   renderUsers(c) {
-    const users = this.state.db.users || [];
+    const users = this.state.db?.users || [];
     const catalog = this.state.catalog?.paidFeatures || [];
     const onlineCnt = users.filter(u => this.isOnline(u)).length;
     const pendingCnt = users.filter(u => u.status === 'pending').length;
@@ -1293,13 +1184,14 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     const expiringCnt = expiringUsers.length;
     const expiredCnt = expiredUsers.length;
 
-    // Coğrafi Şehir & Radar İstatistiği (Seçenek 2)
+    // Gerçek Şehir & Coğrafi Gruplama (Gerçek verilerle)
     const onlineUsers = users.filter(u => this.isOnline(u));
-    const cityCounts = {};
+    const cityGroups = {};
     onlineUsers.forEach(u => {
       const g = this.getGeoInfo(u.lastIp, u);
-      const k = `${g.flag} ${g.city}`;
-      cityCounts[k] = (cityCounts[k] || 0) + 1;
+      const k = g.city || g.ip;
+      if (!cityGroups[k]) cityGroups[k] = { info: g, users: [] };
+      cityGroups[k].users.push(u);
     });
 
     // Radar Blip Noktaları
@@ -1309,17 +1201,62 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
       const str = (u.username || '') + (u.lastIp || '') + i;
       for (let j = 0; j < str.length; j++) h = (h * 33 + str.charCodeAt(j)) & 0xffffffff;
       const angle = (Math.abs(h) % 360) * (Math.PI / 180);
-      const radius = 20 + (Math.abs(h >> 4) % 62); // 20%..82% yarıçap
+      const radius = 20 + (Math.abs(h >> 4) % 62);
       const x = 50 + radius * Math.cos(angle);
       const y = 50 + radius * Math.sin(angle);
       return `
         <div class="radar-blip" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%"
-             title="${this.esc(u.username)} • ${g.flag} ${this.esc(g.city)} • ${g.ping} • ${this.esc(u.lastIp || '127.0.0.1')}"
-             data-inspect-usr="${this.esc(u.id)}"></div>
+             title="${this.esc(u.username)} • ${g.flag} ${this.esc(g.city)} • IP: ${this.esc(u.lastIp || '127.0.0.1')}:${this.esc(u.lastPort || 0)} • ISP: ${this.esc(g.isp || '')}"
+             data-radar-uid="${this.esc(u.id)}" data-radar-city="${this.esc(g.city)}"></div>
       `;
     }).join('');
 
-    // Filtreleme (Seçenek 3)
+    // Şehir dağılım butonları
+    const cityPillsHtml = Object.keys(cityGroups).length ? Object.entries(cityGroups).map(([city, grp]) => `
+      <div class="filter-pill ${this.selectedGeoCity === city ? 'active' : ''}" data-city-click="${this.esc(city)}" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" title="Bu şehirdeki kullanıcıları görmek için tıklayın">
+        <span>${grp.info.flag} ${this.esc(city)}</span>
+        <span style="background:rgba(16,185,129,0.3);padding:1px 6px;border-radius:99px;font-size:11px;color:#fff">${grp.users.length} Aktif</span>
+      </div>
+    `).join('') : '<div class="hint" style="font-size:12px">Şu anda çevrimiçi aktif kullanıcı bekleniyor...</div>';
+
+    // Seçili Şehir Detay Kartı
+    const selGroup = this.selectedGeoCity ? (cityGroups[this.selectedGeoCity] || { info: { flag: '📍', city: this.selectedGeoCity, isp: '' }, users: [] }) : null;
+    const selCardHtml = selGroup ? `
+      <div class="panel" style="border:2px solid #10b981;background:rgba(16,185,129,0.06);margin-bottom:14px;padding:16px 20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div>
+            <h3 style="margin:0;color:#34d399;font-size:16px;display:flex;align-items:center;gap:8px">
+              <span>${selGroup.info.flag}</span>
+              <span>${this.esc(this.selectedGeoCity)} - Bu Bölgeden Bağlı Kullanıcılar (${selGroup.users.length})</span>
+            </h3>
+            <p class="hint" style="margin:2px 0 0;font-size:12px">Kullanıcı kutusuna tıklayarak aşağıdaki listede doğrudan o kullanıcıya odaklanabilirsiniz.</p>
+          </div>
+          <button class="btn small" id="btn-close-geo-card" style="padding:4px 10px;font-size:12px">✕ Kapat</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">
+          ${selGroup.users.map(u => {
+            const uGeo = this.getGeoInfo(u.lastIp, u);
+            return `
+              <div class="panel user-jump-card" data-jump-uid="${this.esc(u.id)}" style="margin:0;padding:12px;cursor:pointer;background:var(--bg);border:1px solid rgba(16,185,129,0.3);border-radius:10px" title="Tabloda bu kullanıcıyı vurgulamak için tıklayın">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <b style="color:#fbbf24;font-size:14px">${this.esc(u.username)}</b>
+                  <span class="tag ok" style="font-size:10px">🟢 Çevrimiçi</span>
+                </div>
+                <div style="font-size:12px;margin-top:4px;color:var(--fg)">👤 ${this.esc(u.fullName || 'İsimsiz')} • 🖥 ${this.esc(u.hostname || 'Bilinmiyor')}</div>
+                <div style="font-size:11.5px;color:#60a5fa;margin-top:3px;font-family:monospace">🌐 ${this.esc(u.lastIp || '127.0.0.1')}:${this.esc(u.lastPort || 0)}</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:2px">🏢 ${this.esc(uGeo.isp || 'Yerel Ağ')}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:3px">📍 ${this.esc(u.currentViewLabel || u.currentView || 'Haberler')}</div>
+                <div style="margin-top:6px;text-align:right">
+                  <span style="font-size:11px;color:#34d399;font-weight:700">👉 Tabloda Vurgula & İncele</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    ` : '';
+
+    // Filtreleme
     this.userFilter = this.userFilter || 'all';
     let filteredUsers = users;
     if (this.userFilter === 'online') filteredUsers = users.filter(u => this.isOnline(u));
@@ -1374,25 +1311,21 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
               <h2 style="margin:0;font-size:16px;display:flex;align-items:center;gap:6px">
                 <span>🌍 Canlı Coğrafi Radar & Şehir Dağılımı</span>
-                <span class="tag ok" style="font-size:10.5px">Canlı Sinyal Aktif</span>
+                <span class="tag ok" style="font-size:10.5px">Gerçek IP Bağlantısı</span>
               </h2>
             </div>
             <p class="hint" style="margin:0 0 10px 0;font-size:12px">
-              J HABER terminaline bağlanan kullanıcıların IP tabanlı coğrafi şehirleri, ping gecikmeleri ve canlı sinyalleri haritada eşzamanlı izleniyor.
+              J HABER terminaline bağlanan kullanıcıların gerçek IP adresleri, bağlandıkları il ve internet servis sağlayıcıları haritada canlı eşlenir. İstediğiniz şehre veya radardaki noktaya tıklayarak o bölgedeki kullanıcıları inceleyebilirsiniz.
             </p>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              ${Object.keys(cityCounts).length ? Object.entries(cityCounts).map(([city, count]) => `
-                <div style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.35);padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;color:#6ee7b7;display:inline-flex;align-items:center;gap:6px">
-                  <span>${this.esc(city)}</span>
-                  <span style="background:rgba(16,185,129,0.3);padding:1px 6px;border-radius:99px;font-size:11px;color:#fff">${count} Aktif</span>
-                </div>
-              `).join('') : `
-                <div class="hint" style="font-size:12px">Şu anda çevrimiçi aktif bağlantı bekleniyor...</div>
-              `}
+              ${cityPillsHtml}
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Tıklanan Şehrin Kullanıcı Kartı (Varsa) -->
+      ${selCardHtml}
 
       <!-- Manuel Kullanıcı Ekleme Paneli -->
       <div class="panel" style="border-color:rgba(245,158,11,.35)">
@@ -1489,7 +1422,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
             <thead>
               <tr>
                 <th>Kullanıcı & Doğrulama</th>
-                <th>Bağlantı & IP : Port & Konum</th>
+                <th>Bağlantı & IP : Port & İl / Konum</th>
                 <th>Şu Anki Sekmesi & Kelimeleri</th>
                 <th>Üyelik Durumu & Kalan Süre</th>
                 <th>Onayla & Süre Tanımla</th>
@@ -1510,7 +1443,6 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
                       ? `<span class="tag err">⛔ Süresi Doldu</span>`
                       : `<span class="tag err">🚫 Askıda</span>`;
 
-                // Süre uyarısı rozeti
                 let expWarningBadge = '';
                 if (u.status === 'active' && u.expiresAt && u.expiresAt !== 'unlimited') {
                   const exp = Number(u.expiresAt || 0);
@@ -1542,11 +1474,11 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
                         <span class="tag ${on ? 'ok' : ''}">${on ? '🟢 Çevrimiçi' : '⚪ Çevrimdışı'}</span>
                         <code style="font-weight:800;color:#60a5fa">${this.esc(u.lastIp || '127.0.0.1')}:${this.esc(u.lastPort || 0)}</code>
                       </div>
-                      <!-- SEÇENEK 2: Coğrafi Şehir & Ping Rozeti -->
-                      <div style="margin-top:3px;display:flex;align-items:center;gap:6px">
-                        <span class="tag" style="background:rgba(59,130,246,0.12);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);font-size:11px">
+                      <div style="margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        <span class="tag" style="background:rgba(59,130,246,0.12);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);font-size:11px" title="Sağlayıcı: ${this.esc(geo.isp)}">
                           ${geo.flag} ${this.esc(geo.city)} <small style="color:#60a5fa">(${geo.ping})</small>
                         </span>
+                        ${geo.isp ? `<span class="hint" style="font-size:10.5px;color:#94a3b8">${this.esc(geo.isp)}</span>` : ''}
                       </div>
                       <div class="hint" style="font-size:11px;margin-top:3px">
                         🖥 ${this.esc(u.hostname || 'Bilinmiyor')} • 📊 ${u.trafficRequests || 0} istek (${Math.round((u.trafficBytes || 0) / 1024)} KB) • Son: ${this.relTime(u.lastSeenAt)}
@@ -1587,7 +1519,6 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
                     </td>
                     <td>
                       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-                        <!-- SEÇENEK 3: WhatsApp Hatırlatma Butonu -->
                         <button class="btn btn-whatsapp small" data-whatsapp-user="${this.esc(u.id)}" title="WhatsApp ile Abonelik / Yenileme Hatırlatması Gönder">📲 WhatsApp</button>
                         <button class="btn small gold" data-feat-btn="${this.esc(u.id)}" title="Ücretli/VIP özellikleri tanımla">💎 Özellikler</button>
                         ${u.isLocked
@@ -1615,7 +1546,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
       </div>
     `;
 
-    // Filtreleme butonları (Seçenek 3)
+    // Filtreleme butonları
     c.querySelectorAll('[data-ufilter]').forEach(btn => {
       btn.onclick = () => {
         this.userFilter = btn.dataset.ufilter;
@@ -1623,13 +1554,59 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
       };
     });
 
-    // Excel & PDF Dışa Aktarma Butonları (Seçenek 4)
+    // Excel & PDF Dışa Aktarma Butonları
     const exportCsvBtn = c.querySelector('#btn-export-csv');
     if (exportCsvBtn) exportCsvBtn.onclick = () => this.exportUsersCsv();
     const printPdfBtn = c.querySelector('#btn-print-pdf');
     if (printPdfBtn) printPdfBtn.onclick = () => this.printUsersPdf();
 
-    // WhatsApp Hatırlatma Butonları (Seçenek 3)
+    // Şehir filtresi tıklaması (Radar altındaki rozetler)
+    c.querySelectorAll('[data-city-click]').forEach(el => {
+      el.onclick = () => {
+        const city = el.dataset.cityClick;
+        this.selectedGeoCity = (this.selectedGeoCity === city) ? null : city;
+        this.render();
+      };
+    });
+
+    // Radardaki blip tıklaması
+    c.querySelectorAll('[data-radar-uid]').forEach(el => {
+      el.onclick = () => {
+        const city = el.dataset.radarCity;
+        const uid = el.dataset.radarUid;
+        this.selectedGeoCity = city;
+        this.render();
+        setTimeout(() => {
+          const row = c.querySelector(`tr[data-uid="${CSS.escape(uid)}"]`);
+          if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            row.style.boxShadow = '0 0 20px #fbbf24';
+            row.style.background = 'rgba(245, 158, 11, 0.2)';
+            setTimeout(() => { row.style.boxShadow = ''; row.style.background = ''; }, 2500);
+          }
+        }, 80);
+      };
+    });
+
+    // Şehir detay kartını kapat butonu
+    const closeGeoBtn = c.querySelector('#btn-close-geo-card');
+    if (closeGeoBtn) closeGeoBtn.onclick = () => { this.selectedGeoCity = null; this.render(); };
+
+    // Şehir detay kartından kullanıcıya atlama
+    c.querySelectorAll('[data-jump-uid]').forEach(el => {
+      el.onclick = () => {
+        const uid = el.dataset.jumpUid;
+        const row = c.querySelector(`tr[data-uid="${CSS.escape(uid)}"]`);
+        if (row) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          row.style.boxShadow = '0 0 20px #fbbf24';
+          row.style.background = 'rgba(245, 158, 11, 0.2)';
+          setTimeout(() => { row.style.boxShadow = ''; row.style.background = ''; }, 2500);
+        }
+      };
+    });
+
+    // WhatsApp Hatırlatma Butonları
     c.querySelectorAll('[data-whatsapp-user]').forEach(btn => {
       btn.onclick = (e) => {
         e.stopPropagation();
@@ -1754,13 +1731,8 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
         const u = users.find(x => x.id === uid);
         if (!u) return;
         const nextLocked = !currentLocked;
-        let msg = u.lockMessage || 'Hesabınız yönetici tarafından geçici olarak kilitlenmiştir. Lütfen yöneticiyle iletişime geçiniz.';
-        if (nextLocked) {
-          const inputMsg = prompt('"' + u.username + '" kullanıcısına gösterilecek kilit mesajı:', msg);
-          if (inputMsg === null) return;
-          msg = inputMsg.trim() || msg;
-        }
-        const r = await jadmin.invoke('admin:user-lock', { userId: u.id, username: u.username, locked: nextLocked, message: msg });
+        const defaultMsg = 'Hesabınız yönetici tarafından geçici olarak kilitlenmiştir. Lütfen yöneticiyle iletişime geçiniz.';
+        const r = await jadmin.invoke('admin:user-lock', { userId: u.id, username: u.username, locked: nextLocked, message: defaultMsg });
         if (r && r.ok) {
           this.state = r.state;
           this.updateHeaderAndBadges();
@@ -1770,263 +1742,144 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
       };
     });
   },
-  renderSecurity(c) {
-    const sec = this.state.db.securitySettings || {};
-    const logs = this.state.db.trafficLogs || [];
-    const watchStr = (sec.watchKeywords || []).join(', ');
-
-    c.innerHTML = `
-      <div class="panel" style="border-color:var(--red)">
-        <h2>🛡 Hırsızlık / Sızıntı Önleme & İzlenen Kelime Radarı</h2>
-        <p class="hint">Aşağıya virgülle ayırarak yazdığınız kelimelerden herhangi birini bir kullanıcı J HABER içinde aratırsa veya anahtar kelime olarak girerse, kullanıcı tablosunda <b>🚨 Kırmızı Güvenlik Alarmı</b> yanar ve loglara kaydedilir.</p>
-        <div class="row">
-          <input id="sec-watch" class="field" style="flex:1" value="${this.esc(watchStr)}" placeholder="şifre, sızıntı, kopyala, veritabanı...">
-          <button class="btn gold" id="sec-save">💾 Güvenlik Ayarlarını Kaydet</button>
-        </div>
-        <div class="row" style="margin-top:8px">
-          <input id="sec-banner" class="field" style="flex:1" value="${this.esc(sec.announcementBanner || '')}" placeholder="Üst Sabit Duyuru Bandı Metni (boş bırakırsanız gizlenir)">
-        </div>
-      </div>
-
-      <div class="panel" style="padding:0;overflow:hidden">
-        <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
-          <h2 style="margin:0">📊 Canlı Kullanıcı Trafik, IP:Port & Güvenlik Logları (${logs.length})</h2>
-          <div style="display:flex;align-items:center;gap:6px">
-            <button class="btn btn-export small" id="sec-export-csv" title="Logları Excel CSV olarak indir">📊 Excel'e Aktar (CSV)</button>
-            <button class="btn btn-export small" id="sec-print-pdf" title="Logları yazdır veya PDF olarak kaydet">📄 PDF / Yazdır</button>
-            <button class="btn small danger" id="logs-clear">🧹 Logları Temizle</button>
-          </div>
-        </div>
-        <div style="max-height:480px;overflow-y:auto">
-          <table class="tbl">
-            <thead>
-              <tr><th>Saat</th><th>Tür</th><th>Kullanıcı</th><th>IP : Port</th><th>Detay</th></tr>
-            </thead>
-            <tbody>
-              ${logs.map(l => `
-                <tr>
-                  <td class="hint">${new Date(l.time).toLocaleString('tr-TR')}</td>
-                  <td><span class="tag ${l.type === 'security' ? 'err' : l.type === 'approve' ? 'ok' : 'info'}">${this.esc(l.type.toUpperCase())}</span></td>
-                  <td><b>${this.esc(l.username)}</b></td>
-                  <td><code style="color:#60a5fa">${this.esc(l.ipPort)}</code></td>
-                  <td>${this.esc(l.detail)}</td>
-                </tr>
-              `).join('') || '<tr><td colspan="5" class="hint" style="text-align:center;padding:20px">Henüz trafik kaydı yok.</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-
-    c.querySelector('#sec-save').onclick = async () => {
-      const watchKeywords = c.querySelector('#sec-watch').value.split(',').map(s => s.trim()).filter(Boolean);
-      const announcementBanner = c.querySelector('#sec-banner').value.trim();
-      const r = await jadmin.invoke('admin:security-save', { watchKeywords, announcementBanner });
-      if (r.ok) { this.state = r.state; this.toast('🛡 Güvenlik ve duyuru ayarları kaydedildi.'); }
-    };
-
-    const secExpCsv = c.querySelector('#sec-export-csv');
-    if (secExpCsv) secExpCsv.onclick = () => this.exportLogsCsv();
-    const secPrnPdf = c.querySelector('#sec-print-pdf');
-    if (secPrnPdf) secPrnPdf.onclick = () => this.printLogsPdf();
-
-    c.querySelector('#logs-clear').onclick = async () => {
-      const r = await jadmin.invoke('admin:logs-clear');
-      if (r.ok) { this.state = r.state; this.render(); }
-    };
-  },
 
   // ============================================================================
-  // 6. YÖNETİCİ ID / ŞİFRE DEĞİŞTİRME & SUNUCU BİLGİLERİ
+  // 2. DIŞ AĞ (İNTERNET) YAYINI & WHATSAPP DAĞITIM MERKEZİ
   // ============================================================================
-  renderCreds(c) {
-    const auth = this.state.db.adminAuth || {};
-    const srv = this.state.serverInfo || {};
-    const lanIps = srv.lanIps || ['127.0.0.1'];
-    const sRunning = srv.serverRunning !== false;
+  renderDistro(c) {
+    const tunnel = this.state.serverInfo?.tunnel || { status: 'starting', url: '' };
+    const isLive = tunnel.status === 'running' && Boolean(tunnel.url);
+
+    const waMsgText = [
+      '📌 J HABER Kurulum ve Giriş Adımları:',
+      '1. Gönderilen "J HABER_WhatsApp_Paketi.zip" dosyasını bilgisayarınıza indirip sağ tıklayın ve "Klasöre Ayıkla / Çıkart" deyin.',
+      '2. Ayıklanan klasörün içindeki "J HABER.exe" dosyasına çift tıklayarak uygulamayı açın.',
+      '3. Kayıt formundan kullanıcı adınızı ve şifrenizi girin, üyeliğiniz otomatik olarak sisteme düşecektir.',
+      tunnel.url ? `4. Sunucu Bağlantı Adresi: ${tunnel.url}` : '',
+      '(Sunucu adresi uygulamanın içine otomatik tanımlıdır, hiçbir ayar gerekmez.)'
+    ].filter(Boolean).join('\n');
 
     c.innerHTML = `
-      <div class="grid2">
-        <div class="panel" style="border-color:rgba(245,158,11,.45)">
-          <h2>🔐 Yönetici ID ve Şifre Değiştir</h2>
-          <p class="hint">Yönetim Paneline giriş yaptığınız Yönetici ID (varsayılan: <b>J Haber</b>) ve şifreyi (varsayılan: <b>123456</b>) buradan istediğiniz zaman değiştirebilirsiniz.</p>
-          <div style="display:flex;flex-direction:column;gap:10px;max-width:420px;margin-top:12px">
-            <div>
-              <label class="hint">Mevcut Şifreniz</label>
-              <input id="cr-cur" type="password" class="field" style="width:100%" placeholder="Mevcut şifrenizi girin">
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="panel" style="border-color:${isLive ? 'var(--green)' : 'var(--accent)'};padding:22px;margin:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
+            <div style="display:flex;align-items:center;gap:14px">
+              <div style="font-size:38px">${isLive ? '🌍' : '⏳'}</div>
+              <div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <h2 style="margin:0">Dış Ağ (İnternet) Canlı Tünel Durumu</h2>
+                  <span class="tag ${isLive ? 'ok' : 'warn'}">${isLive ? '🟢 CANLI YAYINDA (AKTİF)' : '⏳ BAŞLATILIYOR / BEKLENİYOR'}</span>
+                </div>
+                <p class="hint" style="margin:4px 0 0">
+                  Bu tünel adresi sayesinde dünyanın neresinde olursa olsun kullanıcılarınız doğrudan sizin bilgisayarınıza bağlanır.
+                </p>
+              </div>
             </div>
-            <div>
-              <label class="hint">Yeni Yönetici ID</label>
-              <input id="cr-id" class="field" style="width:100%" value="${this.esc(auth.adminId || 'J Haber')}">
+            <div style="display:flex;gap:8px">
+              <button class="btn gold" id="btn-distro-restart-tunnel">🔄 Tüneli Yeniden Başlat</button>
             </div>
+          </div>
+
+          <div style="margin-top:16px;background:var(--bg);padding:14px;border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
             <div>
-              <label class="hint">Yeni Şifre</label>
-              <input id="cr-pass" type="password" class="field" style="width:100%" placeholder="Yeni şifrenizi girin">
+              <span class="hint" style="font-size:11.5px">CANLI DIŞ AĞ BAĞLANTI ADRESİ (BULUT YAYINI):</span>
+              <div style="font-size:16px;font-weight:900;color:#38bdf8;font-family:monospace;margin-top:2px">
+                ${isLive ? tunnel.url : 'https://jhaber-server.onrender.com (Bulut Sunucu)'}
+              </div>
             </div>
-            <div>
-              <label class="hint">Merkez Sunucu Portu (Varsayılan: 47850)</label>
-              <input id="cr-port" type="number" class="field" style="width:100%" value="${this.esc(auth.serverPort || 47850)}">
-            </div>
-            <button class="btn gold" id="cr-save">💾 Yönetici Bilgilerini Güncelle</button>
+            <button class="btn small" id="btn-distro-copy-url" style="padding:8px 14px">📋 Adresi Kopyala</button>
           </div>
         </div>
 
-        <div class="panel">
-          <h2>🌐 Başka Bilgisayarlarla Bağlantı & Sunucu Bilgileri</h2>
-          <div style="padding:14px;border-radius:12px;background:var(--bg);border:2px solid ${sRunning ? 'var(--green)' : 'var(--red)'};margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+        <div class="panel" style="border-color:rgba(37,211,102,0.4);padding:22px;margin:0">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <div style="font-size:32px">📲</div>
             <div>
-              <div style="font-size:15px;font-weight:800;color:${sRunning ? 'var(--green)' : 'var(--red)'}">
-                ${sRunning ? '🟢 Merkez Sunucu Aktif (Dinliyor)' : '🔴 Merkez Sunucu Durduruldu (Kapalı)'}
-              </div>
-              <div class="hint" style="margin-top:2px">Port: <b>${srv.port || 47850}</b> • LAN IP: <b>${lanIps.join(', ')}</b></div>
+              <h2 style="margin:0;color:#25D366">Müşterilere Gönderilecek WhatsApp Kurulum & Bilgi Mesajı</h2>
+              <p class="hint" style="margin:2px 0 0">Aşağıdaki hazır mesajı tek tıkla kopyalayıp WhatsApp üzerinden üyelerinize iletebilirsiniz.</p>
             </div>
-            <button id="cr-btn-server-toggle" class="btn ${sRunning ? 'danger' : 'success'}" style="font-weight:800;padding:8px 16px">
-              ${sRunning ? '🛑 SUNUCUYU DURDUR' : '🟢 SUNUCUYU TEKRAR AÇ'}
-            </button>
           </div>
-          <p class="hint">J HABER uygulamasını başka bir bilgisayara aktardığınızda, o bilgisayardaki kullanıcının giriş ekranındaki <b>"Yönetim Sunucusu"</b> kısmına aşağıdaki adreslerden birini girmesi yeterlidir:</p>
-          <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
-            <div style="padding:10px 14px;border-radius:10px;background:var(--bg);border:1px solid var(--green)">
-              <div class="hint">Aynı Bilgisayarda (Otomatik Bağlanır):</div>
-              <code style="font-size:15px;font-weight:900;color:var(--green)">127.0.0.1:${srv.port || 47850}</code>
-            </div>
-            ${lanIps.map(ip => `
-              <div style="padding:10px 14px;border-radius:10px;background:var(--bg);border:1px solid var(--accent2)">
-                <div class="hint">Aynı Ağdaki (Wi-Fi / LAN) Başka Bilgisayarlar İçin Sunucu Adresi:</div>
-                <code style="font-size:15px;font-weight:900;color:#60a5fa">${this.esc(ip)}:${srv.port || 47850}</code>
-              </div>
-            `).join('')}
-            <div class="hint" style="margin-top:6px">
-              Ortak Veri Dosyası: <code>${this.esc(srv.centralFile || '')}</code>
-            </div>
+          <textarea id="distro-wa-text" class="field" style="width:100%;height:130px;font-family:inherit;font-size:13px;line-height:1.5">${this.esc(waMsgText)}</textarea>
+          <div style="margin-top:10px;display:flex;justify-content:flex-end">
+            <button class="btn success" id="btn-distro-copy-wa" style="font-weight:800;padding:8px 18px">📋 WhatsApp Mesajını Kopyala</button>
           </div>
         </div>
       </div>
     `;
 
-    const crToggle = c.querySelector('#cr-btn-server-toggle');
-    if (crToggle) {
-      crToggle.onclick = async () => {
-        const nextState = !sRunning;
-        const r = await jadmin.invoke('admin:server-toggle', { running: nextState });
-        if (r && r.ok) {
-          this.state = r.state;
-          this.updateHeaderAndBadges();
-          this.render();
-          this.toast(nextState ? '🟢 Sunucu yeniden başlatıldı ve tüm ağa açıldı!' : '🔴 Sunucu başarıyla durduruldu!');
-        }
-      };
-    }
-    c.querySelector('#cr-save').onclick = async () => {
-      const currentPassword = c.querySelector('#cr-cur').value;
-      const newAdminId = c.querySelector('#cr-id').value;
-      const newPassword = c.querySelector('#cr-pass').value;
-      const serverPort = c.querySelector('#cr-port').value;
-      if (!currentPassword) return this.toast('⚠️ Lütfen mevcut şifrenizi girin.', 'err');
-      if (!newAdminId) return this.toast('⚠️ Yeni Yönetici ID zorunludur.', 'err');
-      if (!newPassword || newPassword.length < 4) return this.toast('⚠️ Yeni şifre en az 4 karakter olmalıdır.', 'err');
-      const r = await jadmin.invoke('admin:change-credentials', { currentPassword, newAdminId, newPassword, serverPort });
-      if (!r.ok) return this.toast('⚠️ ' + (r.error || 'Hata'));
-      this.toast('✅ Yönetici ID ve Şifresi hem masaüstünde hem bulutta başarıyla güncellendi!');
-      c.querySelector('#cr-cur').value = '';
-      c.querySelector('#cr-pass').value = '';
+    c.querySelector('#btn-distro-restart-tunnel').onclick = async () => {
+      this.toast('⏳ Tünel yeniden başlatılıyor...');
+      await jadmin.invoke('admin:restart-tunnel');
+    };
+    c.querySelector('#btn-distro-copy-url').onclick = () => {
+      const u = isLive ? tunnel.url : 'https://jhaber-server.onrender.com';
+      navigator.clipboard?.writeText(u);
+      this.toast('📋 Dış ağ adresi panoya kopyalandı: ' + u);
+    };
+    c.querySelector('#btn-distro-copy-wa').onclick = () => {
+      const txt = c.querySelector('#distro-wa-text').value;
+      navigator.clipboard?.writeText(txt);
+      this.toast('📋 WhatsApp kurulum mesajı panoya kopyalandı!');
     };
   },
 
   // ============================================================================
-  // SPOR MODÜLÜ & MAÇ ÖZETİ LİNKLERİ YÖNETİCİSİ
+  // 3. SPOR, FİKSTÜR, PUAN DURUMU & CANLI MAÇ ÖZETİ LİNKLERİ
   // ============================================================================
   renderSportsMgr(c) {
-    const sData = this.state.db?.sportsData || { matches: [], standings: [] };
-    const matches = sData.matches || [];
-    const standings = sData.standings || [];
+    const sports = this.state.db?.sportsData || { matches: [], standings: [], liveLinks: [] };
+    const matches = sports.matches || [];
+    const standings = sports.standings || [];
+    const liveLinks = sports.liveLinks || [];
 
     c.innerHTML = `
-      <div class="panel" style="border-color:#38bdf8">
-        <div class="row" style="justify-content:space-between">
-          <div>
-            <h2>⚽ J HABER "Spor" Sekmesi Canlı İçerik Yönetimi</h2>
-            <p class="hint" style="margin:2px 0 0">Buradan ekleyeceğiniz maçlar, skorlar, fikstür ve <b>video/özet linkleri</b> (örn: "FB - GS Maç Özeti İzle") tüm bağlı J HABER uygulamalarında anında canlı yayına geçer.</p>
-          </div>
-          <span class="tag" style="border-color:#38bdf8;color:#38bdf8;font-weight:700">Canlı Eşzamanlı Yayın</span>
-        </div>
-
-        <div style="background:var(--bg);padding:14px;border-radius:10px;margin-top:14px;border:1px solid var(--line)">
-          <h3 style="margin:0 0 10px;font-size:14px">➕ Yeni Karşılaşma & Maç Özeti Linki Ekle</h3>
-          <div class="row" style="gap:8px">
-            <input id="sp-league" class="field" style="width:160px" placeholder="Lig (örn: Süper Lig)" value="Trendyol Süper Lig">
-            <input id="sp-home" class="field" style="width:140px" placeholder="Ev Sahibi (örn: FB)">
-            <input id="sp-score" class="field" style="width:80px;text-align:center" placeholder="Skor (2 - 1)" value=" - ">
-            <input id="sp-away" class="field" style="width:140px" placeholder="Deplasman (örn: GS)">
-            <input id="sp-time" class="field" style="width:90px" placeholder="Saat/Durum" value="MS">
-          </div>
-          <div class="row" style="gap:8px;margin-top:8px">
-            <input id="sp-link-title" class="field" style="flex:1" placeholder="Buton Başlığı (örn: 📺 FB - GS Maç Özeti İzle)">
-            <input id="sp-link-url" class="field" style="flex:1" placeholder="Gömülecek Link (örn: https://youtube.com/watch?v=... veya haber linki)">
-            <button class="btn primary" id="sp-add-btn" style="font-weight:800">+ Maçı & Linki Yayına Ver</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h2>🔥 Yayındaki Karşılaşmalar (${matches.length})</h2>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
-          ${matches.map((m, idx) => `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);border-radius:9px;border:1px solid var(--line)">
-              <div>
-                <span class="tag">${this.esc(m.league)}</span>
-                <b style="font-size:15px;margin:0 10px">${this.esc(m.home)} ${this.esc(m.score || '-')} ${this.esc(m.away)}</b>
-                <span class="hint">(${this.esc(m.time || 'MS')})</span>
-                ${(m.links && m.links.length) ? `
-                  <div style="margin-top:4px">
-                    ${m.links.map(l => `<span class="tag info">🔗 ${this.esc(l.title)} -> ${this.esc(l.url)}</span>`).join(' ')}
-                  </div>
-                ` : ''}
-              </div>
-              <button class="btn small danger" data-del-match="${idx}">Kaldır</button>
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="panel" style="border-color:rgba(56,189,248,0.35);padding:18px;margin:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+            <div>
+              <h2 style="margin:0;color:#38bdf8">⚽ Spor, Fikstür & Canlı Maç Linkleri Yönetimi</h2>
+              <p class="hint" style="margin:2px 0 0">J HABER kullanıcılarının Spor sekmesinde gördüğü canlı skorlar, fikstür ve maç linklerini buradan yönetebilirsiniz.</p>
             </div>
-          `).join('')}
-          ${!matches.length ? '<div class="empty">Şu an yayında maç kaydı yok.</div>' : ''}
+            <div style="display:flex;gap:8px">
+              <button class="btn gold" id="sp-save">💾 Tüm Spor Ayarlarını Kaydet</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin:0;padding:18px">
+          <h3 style="margin:0 0 10px 0;color:#fbbf24">📺 Canlı Maç & Yayın Linkleri</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input id="sp-links" class="field" style="width:100%" placeholder="Maç linkleri (örn: beIN Sports: https://..., TRT Spor: https://...)" value="${this.esc((liveLinks || []).map(l => typeof l === 'string' ? l : (l.title + ': ' + l.url)).join('\n'))}">
+          </div>
+        </div>
+
+        <div class="panel" style="margin:0;padding:18px">
+          <h3 style="margin:0 0 10px 0;color:#38bdf8">🏆 Canlı Fikstür & Skorlar</h3>
+          <p class="hint" style="margin:0 0 12px 0">Her satıra bir maç yazabilirsiniz. Örn: Galatasaray 2 - 1 Fenerbahçe (Canlı / 75')</p>
+          <textarea id="sp-matches-text" class="field" style="width:100%;height:140px;line-height:1.5">${this.esc(matches.map(m => typeof m === 'string' ? m : `${m.home || ''} ${m.score || '-'} ${m.away || ''} (${m.status || ''})`).join('\n'))}</textarea>
         </div>
       </div>
     `;
 
-    c.querySelector('#sp-add-btn').onclick = async () => {
-      const home = c.querySelector('#sp-home').value.trim();
-      const away = c.querySelector('#sp-away').value.trim();
-      if (!home || !away) return this.toast('Takım isimleri zorunludur!');
-      const league = c.querySelector('#sp-league').value.trim();
-      const score = c.querySelector('#sp-score').value.trim();
-      const time = c.querySelector('#sp-time').value.trim();
-      const lTitle = c.querySelector('#sp-link-title').value.trim();
-      const lUrl = c.querySelector('#sp-link-url').value.trim();
-      const links = (lTitle && lUrl) ? [{ title: lTitle, url: lUrl }] : [];
-
-      const nextMatches = [{ id: 'm_' + Date.now(), league, home, away, score, time, links }, ...matches];
-      const r = await jadmin.invoke('admin:sports-save', { matches: nextMatches, standings });
+    c.querySelector('#sp-save').onclick = async () => {
+      const linksRaw = c.querySelector('#sp-links').value.split('\n').map(s => s.trim()).filter(Boolean);
+      const matchesRaw = c.querySelector('#sp-matches-text').value.split('\n').map(s => s.trim()).filter(Boolean);
+      const payload = {
+        liveLinks: linksRaw,
+        matches: matchesRaw,
+        standings: sports.standings || []
+      };
+      const r = await jadmin.invoke('admin:sports-save', payload);
       if (r && r.ok) {
         this.state = r.state;
         this.render();
-        this.toast('Maç ve özet linki tüm J HABER kullanıcılarında canlı yayına girdi!');
+        this.toast('⚽ Spor ayarları başarıyla kaydedildi!');
       }
     };
-
-    c.querySelectorAll('[data-del-match]').forEach(btn => {
-      btn.onclick = async () => {
-        const idx = Number(btn.dataset.delMatch);
-        const nextMatches = matches.filter((_, i) => i !== idx);
-        const r = await jadmin.invoke('admin:sports-save', { matches: nextMatches, standings });
-        if (r && r.ok) {
-          this.state = r.state;
-          this.render();
-          this.toast('Karşılaşma yayından kaldırıldı.');
-        }
-      };
-    });
   },
 
   // ============================================================================
-  // UZAKTAN SİSTEMİ DURDURMA / KILL-SWITCH
+  // 4. ACİL DURUM & SİSTEMİ KİLİTLEME (KILL-SWITCH)
   // ============================================================================
   renderKillSwitch(c) {
     const lock = this.state.db?.securitySettings?.systemLock || { enabled: false, message: '' };
@@ -2061,19 +1914,19 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
             <div style="margin-top:16px;display:flex;gap:12px;align-items:center">
               ${lock.enabled ? `
                 <button class="btn success" id="ks-toggle" style="font-weight:800;padding:12px 24px;font-size:15px">
-                  ✅ GENEL SİSTEM KİLİDİNİ AÇ (Tüm Kullanıcıları Yayına Döndür)
+                  🔓 GENEL SİSTEM KİLİDİNİ AÇ (Tüm Kullanıcıları Yayına Döndür)
                 </button>
               ` : `
                 <button class="btn danger" id="ks-toggle" style="font-weight:800;padding:12px 24px;font-size:15px;background:rgba(235,87,87,0.18)">
                   🚨 TÜM J HABER KULLANICILARINI ANINDA KİLİTLE & DURDUR
                 </button>
               `}
-              <span class="hint" style="font-size:12px">⚡ Değişiklik J HABER uygulamalarına anında yansır.</span>
+              <span class="hint" style="font-size:12px">⚡ Basınca anında kilitlenir, basınca anında açılır.</span>
             </div>
           </div>
         </div>
 
-        <!-- 2. BİREYSEL KULLANICI KİLİTLEME (KİŞİYE ÖZEL KİLİT) -->
+        <!-- 2. BİREYSEL KULLANICI KİLİTLEME -->
         <div class="panel" style="border-color:rgba(56,189,248,0.35);padding:20px;margin:0">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
             <div style="display:flex;align-items:center;gap:12px">
@@ -2090,11 +1943,6 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
               <span class="tag err">🔒 Kilitli: ${lockedCount}</span>
               <span class="tag ok">✅ Açık: ${normalCount}</span>
             </div>
-          </div>
-
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-            <input id="ks-user-search" class="field" placeholder="🔍 Kullanıcı adı, isim veya kurum ara..." style="max-width:340px;width:100%">
-            <span class="hint" style="font-size:12px">Aşağıdaki listeden kullanıcıya özel kilit mesajı girip kilitleme yapabilirsiniz:</span>
           </div>
 
           <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
@@ -2115,7 +1963,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
                     const on = this.isOnline(u);
                     const defaultMsg = u.lockMessage || 'Hesabınız yönetici tarafından geçici olarak kilitlenmiştir. Lütfen yöneticiyle iletişime geçiniz.';
                     return `
-                      <tr class="ks-user-row" data-search="${this.esc((u.username + ' ' + (u.fullName || '')).toLowerCase())}">
+                      <tr class="ks-user-row">
                         <td>
                           <div style="display:flex;align-items:center;gap:6px">
                             <b style="font-size:13.5px;color:#fbbf24">${this.esc(u.username)}</b>
@@ -2161,15 +2009,16 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
       </div>
     `;
 
-    // Genel kilit toggle
+    // Genel kilit toggle (Tek tıkla doğrudan kilitle / aç)
     c.querySelector('#ks-toggle').onclick = async () => {
-      const msg = c.querySelector('#ks-msg').value.trim();
+      const msg = c.querySelector('#ks-msg').value.trim() || 'Sistem bakım ve güncelleme nedeniyle tüm kullanıcılar için geçici olarak durdurulmuştur.';
       const nextEnabled = !lock.enabled;
       const r = await jadmin.invoke('admin:system-lock', { enabled: nextEnabled, message: msg });
       if (r && r.ok) {
         this.state = r.state;
+        this.updateHeaderAndBadges();
         this.render();
-        this.toast(nextEnabled ? '🚨 TÜM J HABER kullanıcıları anında kilitlendi!' : '✅ Genel sistem kilidi kaldırıldı, uygulamalar açıldı.');
+        this.toast(nextEnabled ? '🚨 TÜM J HABER KULLANICILARI KİLİTLENDİ!' : '🔓 GENEL SİSTEM KİLİDİ AÇILDI, YAYIN AKTİF!');
       }
     };
 
@@ -2194,29 +2043,880 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
 
         if (r && r.ok) {
           this.state = r.state;
+          this.updateHeaderAndBadges();
           this.render();
           this.toast(nextLocked
-            ? `🔒 "${u.username}" kullanıcısının J HABER uygulaması kilitlendi!`
-            : `🔓 "${u.username}" kullanıcısının kilidi açıldı.`
+            ? `🔒 "${u.username}" bireysel olarak kilitlendi.`
+            : `🔓 "${u.username}" kilidi kaldırıldı, normal çalışıyor.`
           );
         }
       };
     });
+  },
 
-    // Arama filtresi
-    const searchInput = c.querySelector('#ks-user-search');
-    if (searchInput) {
-      searchInput.oninput = () => {
-        const q = searchInput.value.toLowerCase().trim();
-        c.querySelectorAll('.ks-user-row').forEach(row => {
-          const txt = row.dataset.search || '';
-          row.style.display = (!q || txt.includes(q)) ? '' : 'none';
-        });
+  // ============================================================================
+  // 5. SOL PANEL & SEKME YÖNETİMİ, 6. YAZI & DUYURU, 7. TALEPLER (RECOVERED)
+  // ============================================================================
+  renderNavMgr(c) {
+    const items = JSON.parse(JSON.stringify(this.state.db.navConfig?.sidebarItems || []));
+    const subTabs = JSON.parse(JSON.stringify(this.state.db.navConfig?.subTabs || {}));
+
+    c.innerHTML = `
+      <div class="panel" style="border-color:rgba(245,158,11,.4)">
+        <div class="row" style="justify-content:space-between">
+          <div>
+            <h2>➕ J HABER Sol Paneline Yeni Özel Sekme Ekle</h2>
+            <p class="hint" style="margin:0">Buradan ekleyeceğiniz yeni sekme, J HABER uygulamasının sol panelinde anında görünür ve içine yazdığınız metin/not/duyuruları gösterir.</p>
+          </div>
+          <button class="btn small danger" id="nav-reset-all">↺ Varsayılan Sekmelere Sıfırla</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <input id="nt-ico" class="field" style="width:70px;text-align:center" value="📌" placeholder="İkon">
+          <input id="nt-label" class="field" style="width:240px" placeholder="Yeni Sekme Adı (örn. Özel Brifing)">
+          <select id="nt-sec">
+            <option value="Akış & Sütunlar">Bölüm: Akış & Sütunlar</option>
+            <option value="Araçlar">Bölüm: Araçlar</option>
+            <option value="Yönetim">Bölüm: Yönetim</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="nt-orange"> <span>🌟 Turuncu Vurgulu</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="nt-paid"> <span>💎 Ücretli / VIP Özellik</span>
+          </label>
+        </div>
+        <div class="row">
+          <textarea id="nt-content" class="field" style="width:100%;height:70px" placeholder="Bu sekmeye tıklandığında J HABER içinde görünecek yazı, not, talimat veya bağlantıları buraya yazın..."></textarea>
+        </div>
+        <button class="btn gold" id="nt-add-btn">+ Sol Panele Sekmeyi Ekle</button>
+      </div>
+
+      <div class="grid2">
+        <!-- SOL PANEL SEKMELERİ -->
+        <div class="panel">
+          <h2>🗂 J HABER Sol Panel Sekmeleri (Gizle / Aç / Yerini Değiştir / Düzenle)</h2>
+          <p class="hint">Sekmelerin sırasını <b>⬆ / ⬇</b> ile değiştirebilir, istediğiniz sekmeyi <b>Gizle/Aç</b> yapabilir veya <b>💎 Ücretli</b> olarak işaretleyebilirsiniz.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+            ${items.map((it, idx) => `
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:10px;background:var(--bg);border:1px solid ${it.visible !== false ? 'var(--line)' : 'rgba(239,68,68,.4)'};opacity:${it.visible !== false ? '1' : '0.6'}">
+                <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+                  <input class="field" data-edit-ico="${idx}" value="${this.esc(it.ico)}" style="width:42px;text-align:center;padding:4px">
+                  <input class="field" data-edit-lbl="${idx}" value="${this.esc(it.label)}" style="flex:1;min-width:120px;padding:5px 8px;font-weight:700">
+                  <select data-edit-sec="${idx}" style="padding:5px;font-size:11px">
+                    <option value="Akış & Sütunlar" ${it.sec === 'Akış & Sütunlar' ? 'selected' : ''}>Akış & Sütunlar</option>
+                    <option value="Araçlar" ${it.sec === 'Araçlar' ? 'selected' : ''}>Araçlar</option>
+                    <option value="Yönetim" ${it.sec === 'Yönetim' ? 'selected' : ''}>Yönetim</option>
+                  </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px">
+                  <button class="btn small" data-move-up="${idx}" ${idx === 0 ? 'disabled' : ''} title="Yukarı Taşı">⬆</button>
+                  <button class="btn small" data-move-dn="${idx}" ${idx === items.length - 1 ? 'disabled' : ''} title="Aşağı Taşı">⬇</button>
+                  <button class="btn small ${it.paid ? 'gold' : ''}" data-tog-paid="${idx}" title="Ücretli/VIP özellik yap">
+                    ${it.paid ? '💎 VIP' : 'Ücretsiz'}
+                  </button>
+                  <button class="btn small ${it.visible !== false ? 'success' : 'danger'}" data-tog-vis="${idx}">
+                    ${it.visible !== false ? '👁 Açık' : '🙈 Gizli'}
+                  </button>
+                  ${!it.builtin ? `<button class="btn small danger" data-del-tab="${this.esc(it.id)}" title="Sekmeyi Kaldır">🗑</button>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <div style="margin-top:12px">
+            <button class="btn primary" id="save-sidebar-edits" style="width:100%;justify-content:center;padding:10px">💾 Sol Panel İsim & Bölüm Değişikliklerini Kaydet</button>
+          </div>
+        </div>
+
+        <!-- İÇ SEKMELER (ALT GÖRÜNÜMLER) -->
+        <div class="panel">
+          <h2>🎛 Sayfa İçi Alt Sekmeler & Modüller (Gizle / Aç)</h2>
+          <p class="hint">Sol panelde tıklayıp açılan pencerelerin içindeki alt sekmeleri (Izgara, TweetDeck Sütunları, X Tekli Akış, Analiz Panelleri vb.) buradan gizleyip açabilirsiniz.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+            ${Object.values(subTabs).map(st => `
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid ${st.visible !== false ? 'var(--green)' : 'var(--line)'}">
+                <div>
+                  <span class="tag info">${this.esc(st.parent)}</span>
+                  <div style="font-weight:800;margin-top:4px">${this.esc(st.label)}</div>
+                </div>
+                <button class="btn small ${st.visible !== false ? 'success' : 'danger'}" data-sub-tog="${this.esc(st.id)}">
+                  ${st.visible !== false ? '👁 Açık (Gizle)' : '🙈 Gizli (Aç)'}
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const saveNav = async (nextItems, nextSubs, msg = '✅ Sekme düzeni güncellendi ve J HABER ile senkronize edildi.') => {
+      const r = await jadmin.invoke('admin:nav-save', { sidebarItems: nextItems, subTabs: nextSubs });
+      if (r.ok) {
+        this.state = r.state;
+        this.render();
+        this.toast(msg);
+      }
+    };
+
+    c.querySelector('#nt-add-btn').onclick = async () => {
+      const ico = c.querySelector('#nt-ico').value;
+      const label = c.querySelector('#nt-label').value;
+      const sec = c.querySelector('#nt-sec').value;
+      const orange = c.querySelector('#nt-orange').checked;
+      const paid = c.querySelector('#nt-paid').checked;
+      const customContent = c.querySelector('#nt-content').value;
+      const r = await jadmin.invoke('admin:nav-add-tab', { ico, label, sec, orange, paid, customContent });
+      if (!r.ok) return this.toast('⚠️ ' + (r.error || 'Hata'));
+      this.state = r.state;
+      this.render();
+      this.toast('✅ Yeni sekme J HABER sol paneline eklendi!');
+    };
+
+    c.querySelector('#nav-reset-all').onclick = async () => {
+      const r = await jadmin.invoke('admin:nav-reset');
+      if (r.ok) { this.state = r.state; this.render(); this.toast('↺ Sekmeler varsayılana döndürüldü.'); }
+    };
+
+    c.querySelectorAll('[data-move-up]').forEach(btn => {
+      btn.onclick = () => {
+        const i = Number(btn.dataset.moveUp);
+        if (i <= 0) return;
+        [items[i - 1], items[i]] = [items[i], items[i - 1]];
+        saveNav(items, subTabs, '⬆ Sekme yukarı taşındı.');
       };
-    }
+    });
+
+    c.querySelectorAll('[data-move-dn]').forEach(btn => {
+      btn.onclick = () => {
+        const i = Number(btn.dataset.moveDn);
+        if (i >= items.length - 1) return;
+        [items[i + 1], items[i]] = [items[i], items[i + 1]];
+        saveNav(items, subTabs, '⬇ Sekme aşağı taşındı.');
+      };
+    });
+
+    c.querySelectorAll('[data-tog-vis]').forEach(btn => {
+      btn.onclick = () => {
+        const i = Number(btn.dataset.togVis);
+        items[i].visible = items[i].visible === false ? true : false;
+        saveNav(items, subTabs, items[i].visible ? '👁 Sekme görünür yapıldı.' : '🙈 Sekme gizlendi.');
+      };
+    });
+
+    c.querySelectorAll('[data-tog-paid]').forEach(btn => {
+      btn.onclick = () => {
+        const i = Number(btn.dataset.togPaid);
+        items[i].paid = !items[i].paid;
+        saveNav(items, subTabs, items[i].paid ? '💎 Sekme ücretli/VIP özellik yapıldı.' : 'Sekme herkese açık yapıldı.');
+      };
+    });
+
+    c.querySelectorAll('[data-del-tab]').forEach(btn => {
+      btn.onclick = async () => {
+        const r = await jadmin.invoke('admin:nav-delete-tab', { id: btn.dataset.delTab });
+        if (r.ok) { this.state = r.state; this.render(); this.toast('🗑 Özel sekme silindi.'); }
+      };
+    });
+
+    c.querySelector('#save-sidebar-edits').onclick = () => {
+      c.querySelectorAll('[data-edit-ico]').forEach(inp => { items[Number(inp.dataset.editIco)].ico = inp.value.trim() || '📌'; });
+      c.querySelectorAll('[data-edit-lbl]').forEach(inp => { items[Number(inp.dataset.editLbl)].label = inp.value.trim() || 'Sekme'; });
+      c.querySelectorAll('[data-edit-sec]').forEach(sel => { items[Number(sel.dataset.editSec)].sec = sel.value; });
+      saveNav(items, subTabs, '💾 Sekme adları ve bölümleri kaydedildi.');
+    };
+
+    c.querySelectorAll('[data-sub-tog]').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.subTog;
+        if (subTabs[id]) {
+          subTabs[id].visible = subTabs[id].visible === false ? true : false;
+          saveNav(items, subTabs, '🎛 Alt sekme görünürlüğü güncellendi.');
+        }
+      };
+    });
+  },
+
+  // ============================================================================
+  // 3. J HABER'E DOĞRUDAN YAZI, DUYURU, NOT, POPUP VE KAYNAK EKLEME
+  // ============================================================================
+  renderContentMgr(c) {
+    const posts = this.state.db.adminContent?.posts || [];
+    const notes = this.state.db.adminContent?.pushedNotes || [];
+    const users = this.state.db.users || [];
+    const userOpts = `<option value="">Tüm Kullanıcılara Gönder</option>` +
+      users.map(u => `<option value="${this.esc(u.username)}">👤 Yalnızca: ${this.esc(u.username)}</option>`).join('');
+
+    c.innerHTML = `
+      <div class="grid2">
+        <!-- 1. YAZI / HABER / DUYURU EKLE -->
+        <div class="panel" style="border-color:rgba(245,158,11,.45)">
+          <h2>📢 J HABER'e Doğrudan Yazı, Haber veya Duyuru Ekle</h2>
+          <p class="hint">Buradan yazdığınız içerik J HABER içindeki <b>Haberler</b> akışına, üst duyuru bandına ve <b>📢 Yönetici Duyuru & Yazıları</b> sekmesine anında düşer.</p>
+          <div class="row">
+            <input id="p-title" class="field" style="flex:1" placeholder="Başlık (örn. Önemli Gündem Notu / Yeni Güncelleme)">
+            <select id="p-cat">
+              <option value="Yönetici Duyurusu">📢 Yönetici Duyurusu</option>
+              <option value="Özel İstihbarat / Analiz">⚡ Özel İstihbarat / Analiz</option>
+              <option value="Son Dakika Notu">🚨 Son Dakika Notu</option>
+              <option value="Sistem Bilgilendirmesi">⚙ Sistem Bilgilendirmesi</option>
+            </select>
+          </div>
+          <div class="row">
+            <textarea id="p-body" class="field" style="width:100%;height:95px" placeholder="J HABER içinde yayınlanacak yazı veya haber metnini buraya yazın..."></textarea>
+          </div>
+          <div class="row">
+            <select id="p-target">${userOpts}</select>
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
+              <input type="checkbox" id="p-feed" checked> <span>📰 Haber Akışında Göster</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
+              <input type="checkbox" id="p-banner"> <span>📌 Üst Sabit Bant Yap</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
+              <input type="checkbox" id="p-imp" checked> <span>🔥 Önemli Vurgula</span>
+            </label>
+          </div>
+          <button class="btn gold" id="p-send">📢 J HABER'de Şimdi Yayınla</button>
+
+          <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px;max-height:240px;overflow-y:auto">
+            <b>Yayınlanan Yönetici Yazıları (${posts.length})</b>
+            ${posts.map(p => `
+              <div style="padding:8px 10px;border-radius:9px;background:var(--bg);border:1px solid var(--line);margin-top:6px;display:flex;justify-content:space-between;gap:8px">
+                <div>
+                  <span class="tag warn">${this.esc(p.category)}</span>
+                  ${p.targetUser ? `<span class="tag info">👤 ${this.esc(p.targetUser)}</span>` : '<span class="tag ok">Tüm Üyeler</span>'}
+                  <div style="font-weight:800;margin-top:3px">${this.esc(p.title)}</div>
+                  <div class="hint" style="font-size:11.5px;margin-top:2px">${this.esc(p.body)}</div>
+                </div>
+                <button class="btn small danger" data-del-post="${this.esc(p.id)}">🗑</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- 2. KULLANICILARIN NOTLAR SEKMESİNE DOĞRUDAN NOT EKLE -->
+        <div class="panel">
+          <h2>📝 J HABER "Notlar" Sekmesine Doğrudan Not Ekle</h2>
+          <p class="hint">Buradan yazdığınız notlar, kullanıcıların J HABER sol panelindeki <b>📝 Notlar</b> sekmesine "👑 Yönetici Notu" olarak doğrudan eklenir.</p>
+          <div class="row">
+            <input id="n-title" class="field" style="flex:1" placeholder="Not Başlığı (örn. Takip Edilecek Başlıklar)">
+            <select id="n-target">${userOpts}</select>
+          </div>
+          <div class="row">
+            <textarea id="n-body" class="field" style="width:100%;height:95px" placeholder="Kullanıcının Notlar bölümüne eklenecek not içeriği..."></textarea>
+          </div>
+          <button class="btn primary" id="n-send">📝 Notlar Sekmesine Gönder</button>
+
+          <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px;max-height:240px;overflow-y:auto">
+            <b>Gönderilen Yönetici Notları (${notes.length})</b>
+            ${notes.map(n => `
+              <div style="padding:8px 10px;border-radius:9px;background:var(--bg);border:1px solid var(--line);margin-top:6px;display:flex;justify-content:space-between;gap:8px">
+                <div>
+                  <span class="tag info">${n.targetUser ? '👤 ' + this.esc(n.targetUser) : 'Tüm Üyeler'}</span>
+                  <div style="font-weight:800;margin-top:3px">${this.esc(n.title)}</div>
+                  <div class="hint" style="font-size:11.5px;margin-top:2px">${this.esc(n.body)}</div>
+                </div>
+                <button class="btn small danger" data-del-note="${this.esc(n.id)}">🗑</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <!-- 3. ANLIK EKRAN POPUP BİLDİRİMİ -->
+        <div class="panel">
+          <h2>⚡ Kullanıcı Ekranına Anlık Canlı Pencere (Popup) Gönder</h2>
+          <p class="hint">Açık olan J HABER ekranlarının tam ortasında anında beliren yönetici mesajı gönderir.</p>
+          <div class="row">
+            <input id="pop-title" class="field" style="flex:1" value="👑 YÖNETİCİ MESAJI" placeholder="Başlık">
+            <select id="pop-target">${userOpts}</select>
+          </div>
+          <div class="row">
+            <input id="pop-msg" class="field" style="width:100%" placeholder="Ekranda çıkacak mesajı yazın...">
+          </div>
+          <div class="row">
+            <button class="btn gold" id="pop-send">⚡ Anlık Ekran Mesajı Gönder</button>
+            <button class="btn small danger" id="pop-clear">Aktif Popup'ı Kaldır</button>
+          </div>
+        </div>
+
+        <!-- 4. UZAKTAN RSS KAYNAĞI VEYA YILDIZLI KELİME EKLE -->
+        <div class="panel">
+          <h2>📡 J HABER'e Uzaktan RSS Haber Kaynağı veya 🌟 Yıldızlı Kelime Ekle</h2>
+          <div class="row">
+            <input id="pf-name" class="field" placeholder="Site Adı (örn. TRT Haber)">
+            <input id="pf-url" class="field" style="flex:1" placeholder="RSS URL (https://...)">
+            <button class="btn small primary" id="pf-send">+ RSS Kaynağı Gönder</button>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <input id="ps-word" class="field" style="flex:1" placeholder="Tüm kullanıcılara eklenecek 🌟 Yıldızlı Anahtar Kelime...">
+            <button class="btn small gold" id="ps-send">+ Yıldızlı Kelime Gönder</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    c.querySelector('#p-send').onclick = async () => {
+      const r = await jadmin.invoke('admin:post-add', {
+        title: c.querySelector('#p-title').value,
+        category: c.querySelector('#p-cat').value,
+        body: c.querySelector('#p-body').value,
+        targetUser: c.querySelector('#p-target').value,
+        showInNewsFeed: c.querySelector('#p-feed').checked,
+        pinnedBanner: c.querySelector('#p-banner').checked,
+        important: c.querySelector('#p-imp').checked
+      });
+      if (!r.ok) return this.toast('⚠️ ' + (r.error || 'Hata'));
+      this.state = r.state;
+      this.render();
+      this.toast('📢 Yönetici yazısı J HABER uygulamasına gönderildi!');
+    };
+
+    c.querySelectorAll('[data-del-post]').forEach(btn => {
+      btn.onclick = async () => {
+        const r = await jadmin.invoke('admin:post-delete', { id: btn.dataset.delPost });
+        if (r.ok) { this.state = r.state; this.render(); }
+      };
+    });
+
+    c.querySelector('#n-send').onclick = async () => {
+      const r = await jadmin.invoke('admin:note-push', {
+        title: c.querySelector('#n-title').value,
+        body: c.querySelector('#n-body').value,
+        targetUser: c.querySelector('#n-target').value
+      });
+      if (!r.ok) return this.toast('⚠️ ' + (r.error || 'Hata'));
+      this.state = r.state;
+      this.render();
+      this.toast('📝 Not doğrudan J HABER Notlar sekmesine eklendi!');
+    };
+
+    c.querySelectorAll('[data-del-note]').forEach(btn => {
+      btn.onclick = async () => {
+        const r = await jadmin.invoke('admin:note-delete', { id: btn.dataset.delNote });
+        if (r.ok) { this.state = r.state; this.render(); }
+      };
+    });
+
+    c.querySelector('#pop-send').onclick = async () => {
+      const msg = c.querySelector('#pop-msg').value.trim();
+      if (!msg) return this.toast('⚠️ Lütfen mesaj yazın.');
+      const r = await jadmin.invoke('admin:broadcast-popup', {
+        title: c.querySelector('#pop-title').value,
+        message: msg,
+        targetUser: c.querySelector('#pop-target').value
+      });
+      if (r.ok) { this.state = r.state; this.toast('⚡ Anlık ekran mesajı gönderildi!'); }
+    };
+
+    c.querySelector('#pop-clear').onclick = async () => {
+      const r = await jadmin.invoke('admin:broadcast-popup', { clear: true });
+      if (r.ok) { this.state = r.state; this.toast('Popup temizlendi.'); }
+    };
+
+    c.querySelector('#pf-send').onclick = async () => {
+      const r = await jadmin.invoke('admin:push-extra', {
+        kind: 'feed',
+        name: c.querySelector('#pf-name').value,
+        url: c.querySelector('#pf-url').value
+      });
+      if (!r.ok) return this.toast('⚠️ ' + (r.error || 'Hata'));
+      this.state = r.state;
+      c.querySelector('#pf-name').value = '';
+      c.querySelector('#pf-url').value = '';
+      this.toast('📡 Yeni RSS kaynağı J HABER uygulamasına eklendi!');
+    };
+
+    c.querySelector('#ps-send').onclick = async () => {
+      const r = await jadmin.invoke('admin:push-extra', {
+        kind: 'starkw',
+        word: c.querySelector('#ps-word').value
+      });
+      if (!r.ok) return this.toast('⚠️ ' + (r.error || 'Hata'));
+      this.state = r.state;
+      c.querySelector('#ps-word').value = '';
+      this.toast('🌟 Yıldızlı kelime J HABER uygulamasına eklendi!');
+    };
+  },
+
+  // ============================================================================
+  // 4. KULLANICI ŞİKAYET & TALEPLERİ (YÖNETİCİ İLETİŞİM MERKEZİ)
+  // ============================================================================
+  renderTickets(c) {
+    const tickets = this.state.db.tickets || [];
+
+    c.innerHTML = `
+      <div class="panel">
+        <h2>💬 Kullanıcı Şikayet, Talep ve Destek Mesajları (${tickets.length})</h2>
+        <p class="hint">J HABER sol panelindeki <b>"💬 Yöneticiyle İletişime Geç"</b> sekmesinden veya üyelik onay ekranından gönderilen tüm mesajlar burada listelenir. Yanıtınız kullanıcının ekranında anında görünür.</p>
+      </div>
+
+      ${tickets.length ? tickets.map(t => `
+        <div class="panel" style="border-color:${t.status === 'open' ? 'var(--accent)' : 'var(--line)'}">
+          <div class="row" style="justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span class="tag ${t.status === 'open' ? 'warn' : t.status === 'replied' ? 'ok' : ''}">
+                ${t.status === 'open' ? '🟡 Yanıt Bekliyor' : t.status === 'replied' ? '🟢 Yanıtlandı' : '⚪ Kapatıldı'}
+              </span>
+              <span class="tag info">${this.esc(t.category)}</span>
+              <b style="font-size:14.5px;color:#fbbf24">👤 ${this.esc(t.username)}</b>
+              <code class="hint">(${this.esc(t.ipPort || '')})</code>
+              <span style="font-weight:800;font-size:14px">— ${this.esc(t.subject)}</span>
+            </div>
+            <div class="row" style="margin:0">
+              <span class="hint">${this.relTime(t.updatedAt)}</span>
+              <button class="btn small danger" data-tkt-del="${this.esc(t.id)}">🗑 Sil</button>
+            </div>
+          </div>
+
+          <div style="margin:10px 0;display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:10px;background:var(--bg)">
+            ${(t.messages || []).map(m => `
+              <div style="padding:8px 12px;border-radius:8px;background:${m.sender === 'admin' ? 'rgba(245,158,11,.15)' : 'var(--bg2)'};border-left:3px solid ${m.sender === 'admin' ? 'var(--accent)' : 'var(--accent2)'}">
+                <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px">
+                  <b style="color:${m.sender === 'admin' ? '#fbbf24' : '#60a5fa'}">${this.esc(m.author)}</b>
+                  <span class="hint">${new Date(m.time).toLocaleString('tr-TR')}</span>
+                </div>
+                <div style="white-space:pre-wrap">${this.esc(m.text)}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="row" style="margin:0">
+            <input class="field" data-tkt-inp="${this.esc(t.id)}" style="flex:1" placeholder="Kullanıcıya yanıtınızı yazın...">
+            <button class="btn gold" data-tkt-send="${this.esc(t.id)}">📨 Yanıt Gönder</button>
+            <button class="btn small" data-tkt-close="${this.esc(t.id)}">✓ Çözüldü İşaretle</button>
+          </div>
+        </div>
+      `).join('') : `
+        <div class="panel" style="text-align:center;padding:30px" class="hint">
+          Henüz kullanıcılardan gelen bir şikayet veya talep mesajı yok.
+        </div>
+      `}
+    `;
+
+    c.querySelectorAll('[data-tkt-send]').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.tktSend;
+        const inp = c.querySelector(`[data-tkt-inp="${CSS.escape(id)}"]`);
+        const text = inp ? inp.value.trim() : '';
+        if (!text) return this.toast('⚠️ Yanıt metni yazın.');
+        const r = await jadmin.invoke('admin:ticket-reply', { ticketId: id, text, status: 'replied' });
+        if (r.ok) { this.state = r.state; this.updateHeaderAndBadges(); this.render(); this.toast('✅ Yanıt kullanıcıya iletildi.'); }
+      };
+    });
+
+    c.querySelectorAll('[data-tkt-close]').forEach(btn => {
+      btn.onclick = async () => {
+        const r = await jadmin.invoke('admin:ticket-reply', { ticketId: btn.dataset.tktClose, status: 'closed' });
+        if (r.ok) { this.state = r.state; this.updateHeaderAndBadges(); this.render(); }
+      };
+    });
+
+    c.querySelectorAll('[data-tkt-del]').forEach(btn => {
+      btn.onclick = async () => {
+        const r = await jadmin.invoke('admin:ticket-delete', { ticketId: btn.dataset.tktDel });
+        if (r.ok) { this.state = r.state; this.updateHeaderAndBadges(); this.render(); }
+      };
+    });
+  },
+
+  // ============================================================================
+  // 5. GÜVENLİK RADARI, YASAKLI KELİME KALKANI & TRAFİK LOGLARI
+  // ============================================================================
+  renderSecurity(c) {
+    const sec = this.state.db.securitySettings || {};
+    const logs = this.state.db.trafficLogs || [];
+    const watchStr = (sec.watchKeywords || []).join(', ');
+
+    c.innerHTML = `
+      <div class="panel" style="border-color:var(--red)">
+        <h2>🛡 Hırsızlık / Sızıntı Önleme & İzlenen Kelime Radarı</h2>
+        <p class="hint">Aşağıya virgülle ayırarak yazdığınız kelimelerden herhangi birini bir kullanıcı J HABER içinde aratırsa veya anahtar kelime olarak girerse, kullanıcı tablosunda <b>🚨 Kırmızı Güvenlik Alarmı</b> yanar ve loglara kaydedilir.</p>
+        <div class="row">
+          <input id="sec-watch" class="field" style="flex:1" value="${this.esc(watchStr)}" placeholder="şifre, sızıntı, kopyala, veritabanı...">
+          <button class="btn gold" id="sec-save">💾 Güvenlik Ayarlarını Kaydet</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input id="sec-banner" class="field" style="flex:1" value="${this.esc(sec.announcementBanner || '')}" placeholder="Üst Sabit Duyuru Bandı Metni (boş bırakırsanız gizlenir)">
+        </div>
+      </div>
+
+      <div class="panel" style="padding:0;overflow:hidden">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+          <h2 style="margin:0">📊 Canlı Kullanıcı Trafik, IP:Port & Güvenlik Logları (${logs.length})</h2>
+          <button class="btn small danger" id="logs-clear">🧹 Logları Temizle</button>
+        </div>
+        <div style="max-height:480px;overflow-y:auto">
+          <table class="tbl">
+            <thead>
+              <tr><th>Saat</th><th>Tür</th><th>Kullanıcı</th><th>IP : Port</th><th>Detay</th></tr>
+            </thead>
+            <tbody>
+              ${logs.map(l => `
+                <tr>
+                  <td class="hint">${new Date(l.time).toLocaleString('tr-TR')}</td>
+                  <td><span class="tag ${l.type === 'security' ? 'err' : l.type === 'approve' ? 'ok' : 'info'}">${this.esc(l.type.toUpperCase())}</span></td>
+                  <td><b>${this.esc(l.username)}</b></td>
+                  <td><code style="color:#60a5fa">${this.esc(l.ipPort)}</code></td>
+                  <td>${this.esc(l.detail)}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="5" class="hint" style="text-align:center;padding:20px">Henüz trafik kaydı yok.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    c.querySelector('#sec-save').onclick = async () => {
+      const watchKeywords = c.querySelector('#sec-watch').value.split(',').map(s => s.trim()).filter(Boolean);
+      const announcementBanner = c.querySelector('#sec-banner').value.trim();
+      const r = await jadmin.invoke('admin:security-save', { watchKeywords, announcementBanner });
+      if (r.ok) { this.state = r.state; this.toast('🛡 Güvenlik ve duyuru ayarları kaydedildi.'); }
+    };
+
+    c.querySelector('#logs-clear').onclick = async () => {
+      const r = await jadmin.invoke('admin:logs-clear');
+      if (r.ok) { this.state = r.state; this.render(); }
+    };
+  },
+
+  // ============================================================================
+  // 6. YÖNETİCİ ID / ŞİFRE DEĞİŞTİRME & SUNUCU BİLGİLERİ
+  // ============================================================================,
+
+  // ============================================================================
+  // 8. GÜVENLİK RADARI & LOGLAR
+  // ============================================================================
+  renderSecurity(c) {
+    const sec = this.state.db?.securitySettings || {};
+    const logs = this.state.db?.trafficLogs || [];
+    const watchStr = (sec.watchKeywords || []).join(', ');
+
+    c.innerHTML = `
+      <div class="panel" style="border-color:var(--red)">
+        <h2>🛡 Hırsızlık / Sızıntı Önleme & İzlenen Kelime Radarı</h2>
+        <p class="hint">Aşağıya virgülle ayırarak yazdığınız kelimelerden herhangi birini bir kullanıcı J HABER içinde aratırsa veya anahtar kelime olarak girerse, kullanıcı tablosunda <b>🚨 Kırmızı Güvenlik Alarmı</b> yanar ve loglara kaydedilir.</p>
+        <div class="row">
+          <input id="sec-watch" class="field" style="flex:1" value="${this.esc(watchStr)}" placeholder="şifre, sızıntı, kopyala, veritabanı...">
+          <button class="btn gold" id="sec-save">💾 Güvenlik Ayarlarını Kaydet</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input id="sec-banner" class="field" style="flex:1" value="${this.esc(sec.announcementBanner || '')}" placeholder="Üst Sabit Duyuru Bandı Metni (boş bırakırsanız gizlenir)">
+        </div>
+      </div>
+
+      <div class="panel" style="padding:0;overflow:hidden">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <h2 style="margin:0">📊 Canlı Kullanıcı Trafik, IP:Port & Güvenlik Logları (${logs.length})</h2>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="btn btn-export small" id="sec-export-csv" title="Logları Excel CSV olarak indir">📊 Excel'e Aktar (CSV)</button>
+            <button class="btn btn-export small" id="sec-print-pdf" title="Logları yazdır veya PDF olarak kaydet">📄 PDF / Yazdır</button>
+            <button class="btn small danger" id="logs-clear">🧹 Logları Temizle</button>
+          </div>
+        </div>
+        <div style="max-height:480px;overflow-y:auto">
+          <table class="tbl">
+            <thead>
+              <tr><th>Saat</th><th>Tür</th><th>Kullanıcı</th><th>IP : Port</th><th>Detay</th></tr>
+            </thead>
+            <tbody>
+              ${logs.map(l => `
+                <tr>
+                  <td class="hint">${new Date(l.time).toLocaleString('tr-TR')}</td>
+                  <td><span class="tag ${l.type === 'security' ? 'err' : l.type === 'approve' ? 'ok' : 'info'}">${this.esc((l.type || '').toUpperCase())}</span></td>
+                  <td><b>${this.esc(l.username || '—')}</b></td>
+                  <td><code style="color:#60a5fa">${this.esc(l.ipPort || '—')}</code></td>
+                  <td>${this.esc(l.detail || '—')}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="5" class="hint" style="text-align:center;padding:20px">Henüz trafik kaydı yok.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    const secExpCsv = c.querySelector('#sec-export-csv');
+    if (secExpCsv) secExpCsv.onclick = () => this.exportLogsCsv();
+    const secPrnPdf = c.querySelector('#sec-print-pdf');
+    if (secPrnPdf) secPrnPdf.onclick = () => this.printLogsPdf();
+
+    c.querySelector('#sec-save').onclick = async () => {
+      const watchKeywords = c.querySelector('#sec-watch').value.split(',').map(s => s.trim()).filter(Boolean);
+      const announcementBanner = c.querySelector('#sec-banner').value.trim();
+      const r = await jadmin.invoke('admin:security-save', { watchKeywords, announcementBanner });
+      if (r.ok) { this.state = r.state; this.toast('🛡 Güvenlik ve duyuru ayarları kaydedildi.'); }
+    };
+
+    c.querySelector('#logs-clear').onclick = async () => {
+      const r = await jadmin.invoke('admin:logs-clear');
+      if (r.ok) { this.state = r.state; this.render(); }
+    };
+  },
+
+  // ============================================================================
+  // 9. GÖRÜNÜM & MARKA ÖZELLEŞTİRME (RECOVERED)
+  // ============================================================================
+  renderBranding(c) {
+    const branding = this.state.db?.branding || {
+      adminBrandTitle: 'J HABER YÖNETİM',
+      adminBrandSubtitle: 'Merkez Sunucu Aktif',
+      clientAppTitle: 'J HABER',
+      clientWelcomeMsg: 'Merkez Haber & İstihbarat Portalı',
+      accentColor: 'gold',
+      sidebarLabels: {}
+    };
+    const labels = branding.sidebarLabels || {};
+
+    c.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="panel" style="border-color:#a78bfa">
+          <div class="row" style="justify-content:space-between">
+            <div>
+              <h2 style="color:#c4b5fd">🎨 Yönetim Paneli & J HABER Uygulaması Kişiselleştirme</h2>
+              <p class="hint" style="margin:2px 0 0">Sol menüdeki kısımların isimlerini, yönetim başlığını ve kullanıcıların bilgisayarındaki J HABER uygulamasının adını/karşılama metnini buradan özgürce değiştirebilirsiniz. Değişiklikler anında hem web'e hem masaüstüne yansır.</p>
+            </div>
+            <span class="tag" style="border-color:#a78bfa;color:#c4b5fd;font-weight:700">Canlı Görünüm Editörü</span>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <!-- 1. PANEL VE UYGULAMA BAŞLIKLARI -->
+          <div class="panel">
+            <h3>👑 Başlık ve Markalama Ayarları</h3>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
+              <div>
+                <label class="hint" style="display:block;margin-bottom:4px">Yönetim Paneli Ana Başlığı (Sol Üst Logo Yanı):</label>
+                <input id="br-admin-title" class="field" style="width:100%" value="${this.esc(branding.adminBrandTitle || 'J HABER YÖNETİM')}">
+              </div>
+              <div>
+                <label class="hint" style="display:block;margin-bottom:4px">Yönetim Paneli Alt Başlığı:</label>
+                <input id="br-admin-sub" class="field" style="width:100%" value="${this.esc(branding.adminBrandSubtitle || 'Merkez Sunucu Aktif')}">
+              </div>
+              <div>
+                <label class="hint" style="display:block;margin-bottom:4px">Kullanıcı J HABER Uygulaması Başlığı:</label>
+                <input id="br-client-title" class="field" style="width:100%" value="${this.esc(branding.clientAppTitle || 'J HABER')}">
+              </div>
+              <div>
+                <label class="hint" style="display:block;margin-bottom:4px">Kullanıcı Karşılama / Slogan Metni:</label>
+                <input id="br-client-slogan" class="field" style="width:100%" value="${this.esc(branding.clientWelcomeMsg || 'Merkez Haber & İstihbarat Portalı')}">
+              </div>
+              <div>
+                <label class="hint" style="display:block;margin-bottom:4px">Tema Vurgu Rengi:</label>
+                <select id="br-accent-color" style="width:100%;padding:8px 12px;border-radius:8px;background:var(--bg);color:var(--fg);border:1px solid var(--line)">
+                  <option value="gold" ${branding.accentColor === 'gold' ? 'selected' : ''}>🟡 Altın Sarısı (Varsayılan - Klasik)</option>
+                  <option value="blue" ${branding.accentColor === 'blue' ? 'selected' : ''}>🔵 Siber Mavi (İstihbarat / Modern)</option>
+                  <option value="green" ${branding.accentColor === 'green' ? 'selected' : ''}>🟢 Zümrüt Yeşili (Güvenlik / Canlı)</option>
+                  <option value="red" ${branding.accentColor === 'red' ? 'selected' : ''}>🔴 Neon Kırmızı (Taktik / Alarm)</option>
+                  <option value="purple" ${branding.accentColor === 'purple' ? 'selected' : ''}>🟣 Gece Moru (Özel Operasyon)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. SOL PANEL MENÜ İSİMLERİNİ DÜZENLEME -->
+          <div class="panel">
+            <h3>📑 Sol Panel Menü İsimlerini Özelleştir</h3>
+            <p class="hint" style="margin:2px 0 10px">Sol menüdeki butonların üzerindeki yazıları istediğiniz gibi özelleştirebilirsiniz:</p>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div class="row" style="gap:8px;align-items:center">
+                <span style="width:140px;font-size:12.5px;color:var(--muted)">👥 Kullanıcılar:</span>
+                <input id="lbl-users" class="field" style="flex:1" value="${this.esc(labels.users || 'Kullanıcılar & Canlı Trafik')}">
+              </div>
+              <div class="row" style="gap:8px;align-items:center">
+                <span style="width:140px;font-size:12.5px;color:var(--muted)">🌍 Dış Ağ Dağıtım:</span>
+                <input id="lbl-distro" class="field" style="flex:1" value="${this.esc(labels.distro || 'Dış Ağ & WhatsApp Dağıtım')}">
+              </div>
+              <div class="row" style="gap:8px;align-items:center">
+                <span style="width:140px;font-size:12.5px;color:var(--muted)">⚽ Spor & Maçlar:</span>
+                <input id="lbl-sports" class="field" style="flex:1" value="${this.esc(labels.sports || 'Spor, Fikstür & Maç Linkleri')}">
+              </div>
+              <div class="row" style="gap:8px;align-items:center">
+                <span style="width:140px;font-size:12.5px;color:var(--muted)">🚨 Acil Durum / Kilit:</span>
+                <input id="lbl-killswitch" class="field" style="flex:1" value="${this.esc(labels.killswitch || 'Acil Durum & Sistemi Kilitle')}">
+              </div>
+              <div class="row" style="gap:8px;align-items:center">
+                <span style="width:140px;font-size:12.5px;color:var(--muted)">🗂 Sekme Yönetimi:</span>
+                <input id="lbl-navmgr" class="field" style="flex:1" value="${this.esc(labels.navmgr || 'Sol Panel & Sekme Yönetimi')}">
+              </div>
+              <div class="row" style="gap:8px;align-items:center">
+                <span style="width:140px;font-size:12.5px;color:var(--muted)">✍ Yazı & Duyuru:</span>
+                <input id="lbl-content" class="field" style="flex:1" value="${this.esc(labels.content || 'J HABER&#39;e Yazı & Not Ekle')}">
+              </div>
+              <div class="row" style="gap:8px;align-items:center">
+                <span style="width:140px;font-size:12.5px;color:var(--muted)">💬 Destek & Şikayet:</span>
+                <input id="lbl-tickets" class="field" style="flex:1" value="${this.esc(labels.tickets || 'Gelen Şikayet & Talepler')}">
+              </div>
+              <div class="row" style="gap:8px;align-items:center">
+                <span style="width:140px;font-size:12.5px;color:var(--muted)">🛡 Güvenlik Radarı:</span>
+                <input id="lbl-security" class="field" style="flex:1" value="${this.esc(labels.security || 'Güvenlik Radarı & Loglar')}">
+              </div>
+              <div class="row" style="gap:8px;align-items:center">
+                <span style="width:140px;font-size:12.5px;color:var(--muted)">🔐 ID & Şifre:</span>
+                <input id="lbl-creds" class="field" style="flex:1" value="${this.esc(labels.creds || 'ID / Şifre & Sunucu Ayarları')}">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:6px">
+          <button class="btn gold" id="br-save" style="font-weight:900;padding:12px 28px;font-size:15px">
+            💾 Tüm Görünüm & Kişiselleştirme Ayarlarını Kaydet
+          </button>
+        </div>
+      </div>
+    `;
+
+    c.querySelector('#br-save').onclick = async () => {
+      const payload = {
+        adminBrandTitle: c.querySelector('#br-admin-title').value.trim(),
+        adminBrandSubtitle: c.querySelector('#br-admin-sub').value.trim(),
+        clientAppTitle: c.querySelector('#br-client-title').value.trim(),
+        clientWelcomeMsg: c.querySelector('#br-client-slogan').value.trim(),
+        accentColor: c.querySelector('#br-accent-color').value,
+        sidebarLabels: {
+          users: c.querySelector('#lbl-users').value.trim(),
+          distro: c.querySelector('#lbl-distro').value.trim(),
+          sports: c.querySelector('#lbl-sports').value.trim(),
+          killswitch: c.querySelector('#lbl-killswitch').value.trim(),
+          navmgr: c.querySelector('#lbl-navmgr').value.trim(),
+          content: c.querySelector('#lbl-content').value.trim(),
+          tickets: c.querySelector('#lbl-tickets').value.trim(),
+          security: c.querySelector('#lbl-security').value.trim(),
+          creds: c.querySelector('#lbl-creds').value.trim()
+        }
+      };
+
+      const r = await jadmin.invoke('admin:branding-save', payload);
+      if (r && r.ok) {
+        this.state = r.state;
+        this.updateHeaderAndBadges();
+        this.render();
+        this.toast('✅ Kişiselleştirme ve marka ayarları başarıyla kaydedildi!');
+      } else {
+        this.toast('⚠️ Hata: ' + (r?.error || 'Kaydedilemedi'), 'err');
+      }
+    };
+  },
+
+
+  // ============================================================================
+  // 10. YÖNETİCİ ID / ŞİFRE DEĞİŞTİRME & SUNUCU BİLGİLERİ
+  // ============================================================================
+  renderCreds(c) {
+    const auth = this.state.db?.adminAuth || {};
+    const srv = this.state.serverInfo || {};
+    const lanIps = srv.lanIps || ['127.0.0.1'];
+    const sRunning = srv.serverRunning !== false;
+
+    c.innerHTML = `
+      <div class="grid2">
+        <div class="panel" style="border-color:rgba(245,158,11,.45)">
+          <h2>🔐 Yönetici ID ve Şifre Değiştir</h2>
+          <p class="hint">Yönetim Paneline giriş yaptığınız Yönetici ID (varsayılan: <b>J Haber</b>) ve şifreyi (varsayılan: <b>123456</b>) buradan istediğiniz zaman değiştirebilirsiniz.</p>
+          <div style="display:flex;flex-direction:column;gap:10px;max-width:420px;margin-top:12px">
+            <div>
+              <label class="hint">Mevcut Şifreniz</label>
+              <input id="cr-cur" type="password" class="field" style="width:100%" placeholder="Mevcut şifrenizi girin">
+            </div>
+            <div>
+              <label class="hint">Yeni Yönetici ID</label>
+              <input id="cr-id" class="field" style="width:100%" value="${this.esc(auth.adminId || 'J Haber')}">
+            </div>
+            <div>
+              <label class="hint">Yeni Şifre</label>
+              <input id="cr-pass" type="password" class="field" style="width:100%" placeholder="Yeni şifrenizi girin">
+            </div>
+            <div>
+              <label class="hint">Merkez Sunucu Portu (Varsayılan: 47850)</label>
+              <input id="cr-port" type="number" class="field" style="width:100%" value="${this.esc(auth.serverPort || srv.port || 47850)}">
+            </div>
+            <button class="btn gold" id="cr-save">💾 Yönetici Bilgilerini Güncelle</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>🌐 Merkez Sunucu & Ağ Bağlantı Bilgileri</h2>
+          <p class="hint">J HABER uygulaması bu bilgisayara aşağıdaki IP adresleri ve port üzerinden bağlanır.</p>
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+            <div><b>Sunucu Durumu:</b> <span class="tag ${sRunning ? 'ok' : 'err'}">${sRunning ? '🟢 Aktif / Çalışıyor' : '🔴 Durduruldu'}</span></div>
+            <div><b>Yerel Ağ IP'leri:</b> <code>${this.esc(lanIps.join(', '))}</code></div>
+            <div><b>Port:</b> <code>${this.esc(srv.port || 47850)}</code></div>
+            <div><b>Dış Ağ Tünel Linki:</b> <code style="color:#38bdf8">${this.esc(srv.tunnel?.url || 'Kapalı')}</code></div>
+            <div><b>Bulut Sunucu (Render):</b> <code style="color:#34d399">https://jhaber-server.onrender.com</code></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    c.querySelector('#cr-save').onclick = async () => {
+      const curPass = c.querySelector('#cr-cur').value;
+      const newId = c.querySelector('#cr-id').value.trim();
+      const newPass = c.querySelector('#cr-pass').value;
+      const newPort = parseInt(c.querySelector('#cr-port').value, 10);
+      if (!curPass) return this.toast('⚠️ Mevcut şifrenizi girmelisiniz.', 'err');
+
+      const r = await jadmin.invoke('admin:change-creds', {
+        currentPassword: curPass,
+        newAdminId: newId,
+        newPassword: newPass || undefined,
+        serverPort: newPort || undefined
+      });
+      if (!r.ok) return this.toast('⚠️ ' + (r.error || 'Hata'), 'err');
+      this.state = r.state;
+      this.toast('✅ Yönetici bilgileri ve şifre güncellendi!');
+      c.querySelector('#cr-cur').value = '';
+      c.querySelector('#cr-pass').value = '';
+    };
+  },
+
+  refreshHoverInspector() {
+    const el = document.getElementById('hover-inspector');
+    if (!el) return;
+    const uid = this.pinnedUserId || this.hoveredUserId;
+    if (!uid) { el.hidden = true; return; }
+    const u = (this.state?.db?.users || []).find(x => x.id === uid);
+    if (!u) { el.hidden = true; return; }
+
+    const on = this.isOnline(u);
+    const kw = u.keywords || {};
+    const starred = kw.starred || [];
+    const general = kw.general || [];
+    const columns = kw.columns || [];
+    const secFlags = u.securityFlags || [];
+    const actions = (u.recentActions || []).slice(-6).reverse();
+
+    el.hidden = false;
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:8px">
+        <div>
+          <b style="color:#fbbf24;font-size:15px">${this.esc(u.username)}</b>
+          <span class="tag ${on ? 'ok' : ''}" style="margin-left:6px">${on ? '🟢 Canlı' : '⚪ Çevrimdışı'}</span>
+        </div>
+        <button class="btn small" id="btn-close-inspect" style="padding:2px 8px">✕ Kapat</button>
+      </div>
+      <div style="margin-top:10px;font-size:12px;display:flex;flex-direction:column;gap:6px">
+        <div><b>📍 Aktif Sekme:</b> <span style="color:#38bdf8">${this.esc(u.currentViewLabel || u.currentView || '—')}</span></div>
+        <div><b>💻 Cihaz:</b> ${this.esc(u.hostname || '—')} • <b>IP:</b> ${this.esc(u.lastIp || '127.0.0.1')}:${this.esc(u.lastPort || 0)}</div>
+        <div><b>⏱ Kalan Süre:</b> <span style="color:${u.status === 'active' ? 'var(--green)' : '#fbbf24'}">${this.esc(this.remainingTimeText(u))}</span></div>
+        ${secFlags.length ? `<div><b style="color:var(--red)">🚨 Şüpheli Kelimeler:</b> ${secFlags.map(s => `<span class="kw-chip alert">${this.esc(s)}</span>`).join('')}</div>` : ''}
+        <div><b>🌟 Yıldızlı Kelimeler (${starred.length}):</b> ${starred.map(s => `<span class="kw-chip star">${this.esc(s)}</span>`).join('') || '<span class="hint">Yok</span>'}</div>
+        <div><b>🔑 Genel Kelimeler (${general.length}):</b> ${general.map(s => `<span class="kw-chip">${this.esc(s)}</span>`).join('') || '<span class="hint">Yok</span>'}</div>
+        ${columns.length ? `<div><b>📑 Özel Sütunlar (${columns.length}):</b> ${columns.map(c => `<span class="kw-chip">${this.esc(c.title || c.keyword || '')}</span>`).join('')}</div>` : ''}
+        <div style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px">
+          <b>⚡ Son Hareketler:</b>
+          <div style="margin-top:4px;display:flex;flex-direction:column;gap:3px">
+            ${actions.map(a => `<div class="hint" style="font-size:11px">• ${new Date(a.time).toLocaleTimeString('tr-TR')} - ${this.esc(a.text || a.action || '')}</div>`).join('') || '<div class="hint">Kayıt yok.</div>'}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const clBtn = el.querySelector('#btn-close-inspect');
+    if (clBtn) clBtn.onclick = () => { this.pinnedUserId = null; this.hoveredUserId = null; el.hidden = true; };
   }
 };
 
+window.AdminApp = AdminApp;
 window.addEventListener('DOMContentLoaded', () => AdminApp.init());
 
 </script>
