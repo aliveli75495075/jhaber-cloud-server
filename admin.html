@@ -236,13 +236,16 @@
         <div class="card-header">
           <div class="card-title" style="color: #60a5fa;">🔑 Yönetici ID ve Şifre Güncelleme</div>
         </div>
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
           Giriş bilgilerinizi güncellediğinizde hem bu web paneli hem de bilgisayarınızdaki masaüstü yönetim paneli yeni bilgilerle çalışır.
         </p>
+        <div id="curAdminIdBadge" style="padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #60a5fa; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); margin-bottom: 6px;">
+          Mevcut Yönetici ID: J Haber
+        </div>
         <div style="display: flex; flex-direction: column; gap: 10px;">
           <div>
             <label style="display:block; font-size:12px; margin-bottom:4px; color:var(--text-muted);">Mevcut Şifre *</label>
-            <input type="password" id="cpCurPass" placeholder="Şu anki şifreniz" style="width: 100%;">
+            <input type="password" id="cpCurPass" placeholder="Şu anki şifreniz (veya 123456)" style="width: 100%;">
           </div>
           <div>
             <label style="display:block; font-size:12px; margin-bottom:4px; color:var(--text-muted);">Yeni Yönetici ID *</label>
@@ -285,14 +288,17 @@
         <div class="card-header">
           <div class="card-title">🛡️ Acil Bakım & Güvenlik Kilidi</div>
         </div>
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
-          Sistem kilidini açtığınızda tüm J HABER kullanıcılarının ekranında kilit mesajı görünür ve uygulama kullanımı geçici olarak durur.
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+          Sistemi kilitlediğinizde tüm J HABER kullanıcılarının ekranında kilit mesajı görünür ve uygulama kullanımı anında durur.
         </p>
+        <div id="lockStatusBadge" style="padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.1); color: #10b981; margin-bottom: 8px;">
+          🟢 Sistem Açık (Kullanıcılar normal erişebiliyor)
+        </div>
         <div style="display: flex; flex-direction: column; gap: 12px;">
           <input type="text" id="lockMsg" value="Sistem bakım nedeniyle geçici olarak durdurulmuştur.">
           <div style="display: flex; gap: 10px;">
             <button class="btn btn-danger" style="flex:1; justify-content: center;" onclick="toggleSystemLock(true)">🔒 SİSTEMİ KİLİTLE</button>
-            <button class="btn btn-success" style="flex:1; justify-content: center;" onclick="toggleSystemLock(false)">🔓 KİLİDİ AÇ</button>
+            <button class="btn btn-success" style="flex:1; justify-content: center;" onclick="toggleSystemLock(false)">🔓 KİLİDİ AÇ (NORMAL ÇALIŞMA)</button>
           </div>
         </div>
       </div>
@@ -371,6 +377,32 @@
       document.getElementById('stPending').innerText = st.stats?.pendingUsers || 0;
       document.getElementById('stOnline').innerText = st.stats?.onlineNow || 0;
       document.getElementById('stTickets').innerText = st.stats?.openTickets || 0;
+
+      // Kilit Durumu Rozeti
+      const sysLock = st.securitySettings?.systemLock || { enabled: false, message: '' };
+      const lockBadge = document.getElementById('lockStatusBadge');
+      if (lockBadge) {
+        if (sysLock.enabled) {
+          lockBadge.innerHTML = '🚨 <b style="color:#ef4444">SİSTEM ŞU AN KİLİTLİ!</b> Tüm kullanıcı ekranları kilitlendi.';
+          lockBadge.style.background = 'rgba(239, 68, 68, 0.18)';
+          lockBadge.style.borderColor = '#ef4444';
+          lockBadge.style.color = '#f87171';
+        } else {
+          lockBadge.innerHTML = '🟢 <b style="color:#10b981">Sistem Açık</b> (Kullanıcılar normal erişebiliyor)';
+          lockBadge.style.background = 'rgba(16, 185, 129, 0.1)';
+          lockBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+          lockBadge.style.color = '#10b981';
+        }
+      }
+      if (sysLock.message && document.getElementById('lockMsg')) {
+        document.getElementById('lockMsg').value = sysLock.message;
+      }
+
+      // Yönetici ID Rozeti
+      const curIdBadge = document.getElementById('curAdminIdBadge');
+      if (curIdBadge && st.adminAuth?.adminId) {
+        curIdBadge.textContent = 'Mevcut Yönetici ID: ' + st.adminAuth.adminId;
+      }
 
       // Bekleyen Üyelikler Tablosu
       const pendings = (st.users || []).filter(u => u.status === 'pending');
