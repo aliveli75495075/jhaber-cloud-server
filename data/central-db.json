@@ -404,244 +404,6 @@
   },
   "users": [
     {
-      "id": "guest",
-      "username": "guest",
-      "password": "123456",
-      "fullName": "",
-      "contact": "",
-      "verified": true,
-      "status": "active",
-      "durationKey": "1m",
-      "planLabel": "1 Ay (30 Gün)",
-      "vipPlan": "Standart",
-      "paidFeatures": [
-        "starkw",
-        "intel",
-        "x",
-        "agenda",
-        "search",
-        "trends",
-        "export"
-      ],
-      "registeredAt": 1795193490901,
-      "approvedAt": 1795193490902,
-      "expiresAt": 1797785490902,
-      "lastSeenAt": 1795193546911,
-      "lastIp": "212.174.189.136",
-      "lastPort": 36208,
-      "hostname": "prodesk",
-      "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 17,
-      "trafficBytes": 15744,
-      "currentView": "sports",
-      "currentViewLabel": "J HABER",
-      "currentSubMode": "",
-      "keywords": {
-        "starred": [],
-        "general": [],
-        "xSingle": [],
-        "columns": [
-          "Haber: son dakika: son dakika",
-          "İlişkili: son dakika: son dakika",
-          "İstihbarata çalışanlar: İstihbarata çalışanlar",
-          "X: son dakika: son dakika",
-          "İlişkili: son dakika: son dakika"
-        ],
-        "combos": [],
-        "searchQuery": ""
-      },
-      "recentActions": [
-        {
-          "time": 1795193508392,
-          "text": "Sekme değiştirdi: J HABER"
-        },
-        {
-          "time": 1795193494592,
-          "text": "Sekme değiştirdi: Haberler"
-        },
-        {
-          "time": 1795193490902,
-          "text": "Aktif oturum bulut tarafından otomatik korundu (212.174.189.136:45582)"
-        }
-      ],
-      "securityFlags": [],
-      "deviceLock": {
-        "enabled": false,
-        "lockedHostname": "prodesk"
-      },
-      "forceLogoutAt": 0,
-      "appBuildTime": 1795193455440,
-      "appVersion": "4.4.0"
-    },
-    {
-      "id": "usr_1795171626814_kpno",
-      "username": "dilara",
-      "password": "123456",
-      "fullName": "",
-      "contact": "5551743730",
-      "verified": false,
-      "status": "active",
-      "durationKey": "1m",
-      "planLabel": "1 Ay (30 Gün)",
-      "vipPlan": "Standart",
-      "paidFeatures": [
-        "starkw",
-        "intel",
-        "x",
-        "agenda",
-        "search",
-        "trends",
-        "export"
-      ],
-      "registeredAt": 1795190230090,
-      "approvedAt": 1795171648039,
-      "expiresAt": 1797763648039,
-      "lastSeenAt": 1795193652678,
-      "lastIp": "62.101.165.184",
-      "lastPort": 50492,
-      "hostname": "PCC",
-      "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 982,
-      "trafficBytes": 1023012,
-      "currentView": "news",
-      "currentViewLabel": "Haberler",
-      "currentSubMode": "Canlı Izgara Görünümü",
-      "keywords": {
-        "starred": [],
-        "general": [],
-        "xSingle": [],
-        "columns": [
-          "Haber: son dakika: son dakika",
-          "İlişkili: son dakika: son dakika",
-          "İstihbarata çalışanlar: İstihbarata çalışanlar",
-          "X: son dakika: son dakika",
-          "İlişkili: son dakika: son dakika"
-        ],
-        "combos": [],
-        "searchQuery": ""
-      },
-      "recentActions": [
-        {
-          "time": 1795193189270,
-          "text": "Sekme değiştirdi: Haberler"
-        },
-        {
-          "time": 1795190802320,
-          "text": "Sekme değiştirdi: 📑 Haber Takip Excel'i — Paylaştığınız Haberleri İşleyin"
-        },
-        {
-          "time": 1795190793142,
-          "text": "Sekme değiştirdi: Haberler"
-        },
-        {
-          "time": 1795190785115,
-          "text": "Sekme değiştirdi: 📑 Haber Takip Excel'i — Paylaştığınız Haberleri İşleyin"
-        },
-        {
-          "time": 1795190783568,
-          "text": "Sekme değiştirdi: Görsel & Birleşik Arama"
-        },
-        {
-          "time": 1795190782838,
-          "text": "Sekme değiştirdi: Haberler"
-        },
-        {
-          "time": 1795190779216,
-          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
-        },
-        {
-          "time": 1795190779151,
-          "text": "Uygulamaya giriş yaptı (62.101.165.184:51244)"
-        },
-        {
-          "time": 1795190230090,
-          "text": "Aktif oturum bulut tarafından otomatik korundu (62.101.165.184:33828)"
-        }
-      ],
-      "securityFlags": [],
-      "deviceLock": {
-        "enabled": false,
-        "lockedHostname": "PCC"
-      },
-      "forceLogoutAt": 0,
-      "geoCity": "Central Albania",
-      "geoRegion": "Central Albania",
-      "geoCountry": "Albania",
-      "geoIsp": "Keminet SHPK",
-      "geoLat": 41.3274446,
-      "geoLon": 19.8186562,
-      "geoIpResolved": "62.101.165.184",
-      "appBuildTime": 1795188440648,
-      "appVersion": "4.3.0"
-    },
-    {
-      "id": "usr_1795164287381_qjp2",
-      "username": "ufuk",
-      "password": "123456",
-      "fullName": "",
-      "contact": "",
-      "verified": false,
-      "status": "active",
-      "durationKey": "1m",
-      "planLabel": "1 Ay (30 Gün)",
-      "vipPlan": "Standart",
-      "paidFeatures": [
-        "starkw",
-        "intel",
-        "x",
-        "agenda",
-        "search",
-        "trends",
-        "export"
-      ],
-      "registeredAt": 1795190227283,
-      "approvedAt": 1795164880581,
-      "expiresAt": 1797756880581,
-      "lastSeenAt": 1795193650320,
-      "lastIp": "212.174.189.136",
-      "lastPort": 50464,
-      "hostname": "vpro",
-      "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 923,
-      "trafficBytes": 887926,
-      "currentView": "news",
-      "currentViewLabel": "Haberler",
-      "currentSubMode": "TweetDeck Sütunları",
-      "keywords": {
-        "starred": [],
-        "general": [],
-        "xSingle": [],
-        "columns": [
-          "Haber: son dakika: son dakika",
-          "İlişkili: son dakika: son dakika",
-          "İstihbarata çalışanlar: İstihbarata çalışanlar",
-          "X: son dakika: son dakika",
-          "İlişkili: son dakika: son dakika"
-        ],
-        "combos": [],
-        "searchQuery": ""
-      },
-      "recentActions": [
-        {
-          "time": 1795190227284,
-          "text": "Aktif oturum bulut tarafından otomatik korundu (212.174.189.136:50126)"
-        }
-      ],
-      "securityFlags": [],
-      "deviceLock": {
-        "enabled": false,
-        "lockedHostname": "vpro"
-      },
-      "forceLogoutAt": 0,
-      "geoCity": "Ankara",
-      "geoRegion": "Ankara",
-      "geoCountry": "Türkiye",
-      "geoIsp": "Turk Telekomunikasyon Anonim Sirketi",
-      "geoLat": 39.9198651,
-      "geoLon": 32.8542699,
-      "geoIpResolved": "212.174.189.136"
-    },
-    {
       "id": "usr_1795157511810_mfyq",
       "username": "irem",
       "password": "123456",
@@ -885,13 +647,13 @@
       "approvedAt": 1795082522906,
       "expiresAt": "unlimited",
       "registeredAt": 1795082508765,
-      "lastSeenAt": 1795193651050,
+      "lastSeenAt": 1795193668516,
       "lastIp": "212.174.189.136",
-      "lastPort": 50476,
+      "lastPort": 53384,
       "hostname": "prodesk",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 2764,
-      "trafficBytes": 6647128,
+      "trafficRequests": 2765,
+      "trafficBytes": 6649885,
       "currentView": "x",
       "currentViewLabel": "X Takibi & Anahtar Kelimeler",
       "currentSubMode": "X TweetDeck Sütunları",
@@ -1089,38 +851,276 @@
         "lockedHostname": "prodesk"
       },
       "forceLogoutAt": 0,
-      "geoCity": "Central Albania",
-      "geoRegion": "Central Albania",
-      "geoCountry": "Albania",
-      "geoIsp": "Keminet SHPK",
-      "geoLat": 41.3274446,
-      "geoLon": 19.8186562,
-      "geoIpResolved": "62.101.165.160",
+      "geoCity": "Ankara",
+      "geoRegion": "Ankara",
+      "geoCountry": "Türkiye",
+      "geoIsp": "Turk Telekomunikasyon Anonim Sirketi",
+      "geoLat": 39.9207,
+      "geoLon": 32.854,
+      "geoIpResolved": "212.174.189.136",
       "isLocked": false,
       "lockMessage": "Hesabınız yönetici tarafından geçici olarak kilitlenmiştir. Lütfen yöneticiyle iletişime geçiniz.",
       "isOnline": true,
       "appBuildTime": 1795188440648,
-      "appVersion": "4.3.0"
+      "appVersion": "4.3.0",
+      "geoDistrict": "Ankara",
+      "geoSubCity": "Ankara",
+      "geoCountryCode": "TR",
+      "geoZip": "06420",
+      "geoMobile": false,
+      "geoProxy": false,
+      "geoSource": "ip-api",
+      "geoResolvedAt": 1795193668590
+    },
+    {
+      "id": "guest",
+      "username": "guest",
+      "password": "123456",
+      "fullName": "",
+      "contact": "",
+      "verified": true,
+      "status": "active",
+      "durationKey": "1m",
+      "planLabel": "1 Ay (30 Gün)",
+      "vipPlan": "Standart",
+      "paidFeatures": [
+        "starkw",
+        "intel",
+        "x",
+        "agenda",
+        "search",
+        "trends",
+        "export"
+      ],
+      "registeredAt": 1795193490901,
+      "approvedAt": 1795193490902,
+      "expiresAt": 1797785490902,
+      "lastSeenAt": 1795193546911,
+      "lastIp": "212.174.189.136",
+      "lastPort": 36208,
+      "hostname": "prodesk",
+      "osInfo": "win32 10.0.26200 (x64)",
+      "trafficRequests": 17,
+      "trafficBytes": 15744,
+      "currentView": "sports",
+      "currentViewLabel": "J HABER",
+      "currentSubMode": "",
+      "keywords": {
+        "starred": [],
+        "general": [],
+        "xSingle": [],
+        "columns": [
+          "Haber: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika",
+          "İstihbarata çalışanlar: İstihbarata çalışanlar",
+          "X: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika"
+        ],
+        "combos": [],
+        "searchQuery": ""
+      },
+      "recentActions": [
+        {
+          "time": 1795193508392,
+          "text": "Sekme değiştirdi: J HABER"
+        },
+        {
+          "time": 1795193494592,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795193490902,
+          "text": "Aktif oturum bulut tarafından otomatik korundu (212.174.189.136:45582)"
+        }
+      ],
+      "securityFlags": [],
+      "deviceLock": {
+        "enabled": false,
+        "lockedHostname": "prodesk"
+      },
+      "forceLogoutAt": 0,
+      "appBuildTime": 1795193455440,
+      "appVersion": "4.4.0"
+    },
+    {
+      "id": "usr_1795171626814_kpno",
+      "username": "dilara",
+      "password": "123456",
+      "fullName": "",
+      "contact": "5551743730",
+      "verified": false,
+      "status": "active",
+      "durationKey": "1m",
+      "planLabel": "1 Ay (30 Gün)",
+      "vipPlan": "Standart",
+      "paidFeatures": [
+        "starkw",
+        "intel",
+        "x",
+        "agenda",
+        "search",
+        "trends",
+        "export"
+      ],
+      "registeredAt": 1795190230090,
+      "approvedAt": 1795171648039,
+      "expiresAt": 1797763648039,
+      "lastSeenAt": 1795193670177,
+      "lastIp": "62.101.165.184",
+      "lastPort": 52466,
+      "hostname": "PCC",
+      "osInfo": "win32 10.0.26200 (x64)",
+      "trafficRequests": 983,
+      "trafficBytes": 1024040,
+      "currentView": "news",
+      "currentViewLabel": "Haberler",
+      "currentSubMode": "Canlı Izgara Görünümü",
+      "keywords": {
+        "starred": [],
+        "general": [],
+        "xSingle": [],
+        "columns": [
+          "Haber: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika",
+          "İstihbarata çalışanlar: İstihbarata çalışanlar",
+          "X: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika"
+        ],
+        "combos": [],
+        "searchQuery": ""
+      },
+      "recentActions": [
+        {
+          "time": 1795193189270,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795190802320,
+          "text": "Sekme değiştirdi: 📑 Haber Takip Excel'i — Paylaştığınız Haberleri İşleyin"
+        },
+        {
+          "time": 1795190793142,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795190785115,
+          "text": "Sekme değiştirdi: 📑 Haber Takip Excel'i — Paylaştığınız Haberleri İşleyin"
+        },
+        {
+          "time": 1795190783568,
+          "text": "Sekme değiştirdi: Görsel & Birleşik Arama"
+        },
+        {
+          "time": 1795190782838,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795190779216,
+          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
+        },
+        {
+          "time": 1795190779151,
+          "text": "Uygulamaya giriş yaptı (62.101.165.184:51244)"
+        },
+        {
+          "time": 1795190230090,
+          "text": "Aktif oturum bulut tarafından otomatik korundu (62.101.165.184:33828)"
+        }
+      ],
+      "securityFlags": [],
+      "deviceLock": {
+        "enabled": false,
+        "lockedHostname": "PCC"
+      },
+      "forceLogoutAt": 0,
+      "geoCity": "Tirana",
+      "geoRegion": "Tirana",
+      "geoCountry": "Albania",
+      "geoIsp": "iRegister.al DataCenter",
+      "geoLat": 41.3253,
+      "geoLon": 19.8184,
+      "geoIpResolved": "62.101.165.184",
+      "appBuildTime": 1795188440648,
+      "appVersion": "4.3.0",
+      "geoDistrict": "Tirana",
+      "geoSubCity": "Tirana",
+      "geoCountryCode": "AL",
+      "geoZip": "1001",
+      "geoMobile": false,
+      "geoProxy": false,
+      "geoSource": "ip-api",
+      "geoResolvedAt": 1795193670194
+    },
+    {
+      "id": "usr_1795164287381_qjp2",
+      "username": "ufuk",
+      "password": "123456",
+      "fullName": "",
+      "contact": "",
+      "verified": false,
+      "status": "active",
+      "durationKey": "1m",
+      "planLabel": "1 Ay (30 Gün)",
+      "vipPlan": "Standart",
+      "paidFeatures": [
+        "starkw",
+        "intel",
+        "x",
+        "agenda",
+        "search",
+        "trends",
+        "export"
+      ],
+      "registeredAt": 1795190227283,
+      "approvedAt": 1795164880581,
+      "expiresAt": 1797756880581,
+      "lastSeenAt": 1795193650320,
+      "lastIp": "212.174.189.136",
+      "lastPort": 50464,
+      "hostname": "vpro",
+      "osInfo": "win32 10.0.26200 (x64)",
+      "trafficRequests": 923,
+      "trafficBytes": 887926,
+      "currentView": "news",
+      "currentViewLabel": "Haberler",
+      "currentSubMode": "TweetDeck Sütunları",
+      "keywords": {
+        "starred": [],
+        "general": [],
+        "xSingle": [],
+        "columns": [
+          "Haber: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika",
+          "İstihbarata çalışanlar: İstihbarata çalışanlar",
+          "X: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika"
+        ],
+        "combos": [],
+        "searchQuery": ""
+      },
+      "recentActions": [
+        {
+          "time": 1795190227284,
+          "text": "Aktif oturum bulut tarafından otomatik korundu (212.174.189.136:50126)"
+        }
+      ],
+      "securityFlags": [],
+      "deviceLock": {
+        "enabled": false,
+        "lockedHostname": "vpro"
+      },
+      "forceLogoutAt": 0,
+      "geoCity": "Ankara",
+      "geoRegion": "Ankara",
+      "geoCountry": "Türkiye",
+      "geoIsp": "Turk Telekomunikasyon Anonim Sirketi",
+      "geoLat": 39.9198651,
+      "geoLon": 32.8542699,
+      "geoIpResolved": "212.174.189.136"
     }
   ],
   "tickets": [],
   "trafficLogs": [
-    {
-      "id": "log_1795190982455_j25u",
-      "time": 1795190982455,
-      "type": "login",
-      "username": "irem",
-      "ipPort": "212.174.189.136:36700",
-      "detail": "Giriş yapıldı (Durum: active, Paket: 1 Ay (30 Gün))"
-    },
-    {
-      "id": "log_1795190779151_7clk",
-      "time": 1795190779152,
-      "type": "login",
-      "username": "dilara",
-      "ipPort": "62.101.165.184:51244",
-      "detail": "Giriş yapıldı (Durum: active, Paket: 1 Ay (30 Gün))"
-    },
     {
       "id": "log_1795157521881_lfld",
       "time": 1795157521881,
@@ -1222,5 +1222,117 @@
     },
     "updatedAt": 1795113743078
   },
-  "deletedUsernames": []
+  "deletedUsernames": [],
+  "plans": {
+    "Standart": {
+      "name": "Standart",
+      "color": "#64748b",
+      "desc": "Temel haber takibi",
+      "features": [
+        "news",
+        "starred",
+        "saved",
+        "groups",
+        "keywords",
+        "arindir",
+        "notes",
+        "calc",
+        "newstrack",
+        "sources",
+        "notify",
+        "settings",
+        "adminposts",
+        "support"
+      ],
+      "all": false
+    },
+    "Plus": {
+      "name": "Plus",
+      "color": "#3b82f6",
+      "desc": "Arama, grafik, spor ve gündem arşivi",
+      "features": [
+        "news",
+        "starred",
+        "saved",
+        "groups",
+        "keywords",
+        "arindir",
+        "notes",
+        "calc",
+        "newstrack",
+        "sources",
+        "notify",
+        "settings",
+        "adminposts",
+        "support",
+        "search",
+        "trends",
+        "agenda",
+        "sports"
+      ],
+      "all": false
+    },
+    "Pro": {
+      "name": "Pro",
+      "color": "#a855f7",
+      "desc": "X takibi, yıldızlı kelimeler ve bildirim merkezi",
+      "features": [
+        "news",
+        "starred",
+        "saved",
+        "groups",
+        "keywords",
+        "arindir",
+        "notes",
+        "calc",
+        "newstrack",
+        "sources",
+        "notify",
+        "settings",
+        "adminposts",
+        "support",
+        "search",
+        "trends",
+        "agenda",
+        "sports",
+        "x",
+        "starkw",
+        "activenotifs",
+        "export"
+      ],
+      "all": false
+    },
+    "Premium": {
+      "name": "Premium",
+      "color": "#f59e0b",
+      "desc": "Tüm özellikler (özel analiz merkezi dahil)",
+      "features": [
+        "news",
+        "starred",
+        "saved",
+        "groups",
+        "keywords",
+        "arindir",
+        "notes",
+        "calc",
+        "newstrack",
+        "sources",
+        "notify",
+        "settings",
+        "adminposts",
+        "support",
+        "search",
+        "trends",
+        "agenda",
+        "sports",
+        "x",
+        "starkw",
+        "activenotifs",
+        "export",
+        "intel"
+      ],
+      "all": true
+    }
+  },
+  "plansUpdatedAt": 0
 }
