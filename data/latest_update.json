@@ -1,6 +1,6 @@
 {
-  "version": "4.2.2",
-  "buildTime": 1795179568827,
-  "asarSize": 2852306,
-  "changelog": "Kamera ile ekran görüntüsü artık Haber Takip Excel'ine otomatik ekliyor"
+  "version": "4.2.3",
+  "buildTime": 1795180359228,
+  "asarSize": 2892642,
+  "changelog": "Güncelleme uygulayıcı onarıldı (boşluklu yol hatası), tüm kullanıcılar için sağlam otomatik güncelleme"
 }
