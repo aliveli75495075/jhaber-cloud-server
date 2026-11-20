@@ -426,16 +426,16 @@
       "registeredAt": 1795190230090,
       "approvedAt": 1795171648039,
       "expiresAt": 1797763648039,
-      "lastSeenAt": 1795190765593,
+      "lastSeenAt": 1795190779215,
       "lastIp": "62.101.165.184",
-      "lastPort": 57836,
+      "lastPort": 51256,
       "hostname": "PCC",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 155,
-      "trafficBytes": 151280,
-      "currentView": "newstrack",
-      "currentViewLabel": "📑 Haber Takip Excel'i",
-      "currentSubMode": "",
+      "trafficRequests": 157,
+      "trafficBytes": 152964,
+      "currentView": "login_wait",
+      "currentViewLabel": "⏳ Onay / Süre Bekleme Ekranı",
+      "currentSubMode": "Canlı Izgara Görünümü",
       "keywords": {
         "starred": [],
         "general": [],
@@ -451,6 +451,14 @@
         "searchQuery": ""
       },
       "recentActions": [
+        {
+          "time": 1795190779216,
+          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
+        },
+        {
+          "time": 1795190779151,
+          "text": "Uygulamaya giriş yaptı (62.101.165.184:51244)"
+        },
         {
           "time": 1795190230090,
           "text": "Aktif oturum bulut tarafından otomatik korundu (62.101.165.184:33828)"
@@ -468,7 +476,9 @@
       "geoIsp": "Keminet SHPK",
       "geoLat": 41.3274446,
       "geoLon": 19.8186562,
-      "geoIpResolved": "62.101.165.184"
+      "geoIpResolved": "62.101.165.184",
+      "appBuildTime": 1795188440648,
+      "appVersion": "4.3.0"
     },
     {
       "id": "usr_1795164287381_qjp2",
@@ -493,13 +503,13 @@
       "registeredAt": 1795190227283,
       "approvedAt": 1795164880581,
       "expiresAt": 1797756880581,
-      "lastSeenAt": 1795190773267,
+      "lastSeenAt": 1795190776840,
       "lastIp": "212.174.189.136",
-      "lastPort": 35110,
+      "lastPort": 35138,
       "hostname": "vpro",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 151,
-      "trafficBytes": 145262,
+      "trafficRequests": 152,
+      "trafficBytes": 146224,
       "currentView": "news",
       "currentViewLabel": "Haberler",
       "currentSubMode": "TweetDeck Sütunları",
@@ -560,13 +570,13 @@
       "registeredAt": 1795157511810,
       "approvedAt": 1795157521881,
       "expiresAt": 1797749521881,
-      "lastSeenAt": 1795190774663,
+      "lastSeenAt": 1795190778157,
       "lastIp": "212.174.189.136",
-      "lastPort": 35124,
+      "lastPort": 51234,
       "hostname": "DESKTOP-RJQ62DT",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 266,
-      "trafficBytes": 214553,
+      "trafficRequests": 267,
+      "trafficBytes": 215526,
       "currentView": "news",
       "currentViewLabel": "Haberler",
       "currentSubMode": "Canlı Izgara Görünümü",
@@ -691,13 +701,13 @@
       "approvedAt": 1795082522906,
       "expiresAt": "unlimited",
       "registeredAt": 1795082508765,
-      "lastSeenAt": 1795190773995,
+      "lastSeenAt": 1795190777515,
       "lastIp": "212.174.189.136",
-      "lastPort": 35120,
+      "lastPort": 35146,
       "hostname": "prodesk",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 1978,
-      "trafficBytes": 4477201,
+      "trafficRequests": 1979,
+      "trafficBytes": 4479973,
       "currentView": "newstrack",
       "currentViewLabel": "📑 Haber Takip Excel'i — Paylaştığınız Haberleri İşleyin",
       "currentSubMode": "",
@@ -911,6 +921,14 @@
   ],
   "tickets": [],
   "trafficLogs": [
+    {
+      "id": "log_1795190779151_7clk",
+      "time": 1795190779152,
+      "type": "login",
+      "username": "dilara",
+      "ipPort": "62.101.165.184:51244",
+      "detail": "Giriş yapıldı (Durum: active, Paket: 1 Ay (30 Gün))"
+    },
     {
       "id": "log_1795157521881_lfld",
       "time": 1795157521881,
