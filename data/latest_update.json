@@ -1,6 +1,6 @@
 {
-  "version": "4.2.1",
-  "buildTime": 1795177467605,
-  "asarSize": 2792589,
-  "changelog": "Düzeltme: güncelleyici sağlamlaştırıldı, şifre değiştirme, Haber Takip Excel'i, filigran kaldırıldı"
+  "version": "4.2.2",
+  "buildTime": 1795179568827,
+  "asarSize": 2852306,
+  "changelog": "Kamera ile ekran görüntüsü artık Haber Takip Excel'ine otomatik ekliyor"
 }

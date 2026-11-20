@@ -4263,11 +4263,11 @@ window.AdminApp = AdminApp;
     window.JHXlsx.download(`J_HABER_Haber_Takip_${stamp()}.xlsx`, [{
       name: 'Haber Takip',
       columns: [
-        { header: 'No', width: 7 }, { header: 'Haber Başlığı', width: 60 }, { header: 'Link', width: 50, link: true },
+        { header: 'No', width: 7 }, { header: 'Tür', width: 9 }, { header: 'Haber Başlığı', width: 55 }, { header: 'İçerik (kısa)', width: 60 }, { header: 'Link', width: 50, link: true },
         { header: 'Konu', width: 22 }, { header: 'Paylaşım Mecrası', width: 18 }, { header: 'Kimin Attığı', width: 20 },
         { header: 'Gün', width: 12 }, { header: 'Saat', width: 10 }, { header: 'Kaynak', width: 20 }, { header: 'Durum', width: 14 }, { header: 'Not', width: 40 }
       ],
-      rows: items.map((r, i) => [items.length - i, r.title, r.url, r.topic, r.medium, r.username, fmtDate(r.sharedAt), fmtTime(r.sharedAt), r.source, r.status, r.note])
+      rows: items.map((r, i) => [items.length - i, r.kind || '', r.title, r.summary || '', r.url, r.topic, r.medium, r.username, fmtDate(r.sharedAt), fmtTime(r.sharedAt), r.source, r.status, r.note])
     }]);
     this.toast('📊 Excel (.xlsx) dosyası indirildi.');
   };
@@ -4310,12 +4310,14 @@ window.AdminApp = AdminApp;
         ${n.err ? `<div class="tag err" style="margin-bottom:8px">⚠ ${this.esc(n.err)}</div>` : ''}
         <div style="overflow:auto;max-height:68vh;border:1px solid var(--line);border-radius:10px">
           <table class="tbl">
-            <thead><tr><th>No</th><th>Haber Başlığı</th><th>Link</th><th>Konu</th><th>Mecra</th><th>Kimin Attığı</th><th>Gün</th><th>Saat</th><th>Not</th><th></th></tr></thead>
+            <thead><tr><th>No</th><th>Tür</th><th>Haber Başlığı</th><th>İçerik (kısa)</th><th>Link</th><th>Konu</th><th>Mecra</th><th>Kimin Attığı</th><th>Gün</th><th>Saat</th><th>Not</th><th></th></tr></thead>
             <tbody>
               ${items.slice(0, SHOW).map((r, i) => `
                 <tr>
                   <td class="hint">${items.length - i}</td>
-                  <td style="max-width:340px;font-weight:700">${this.esc(r.title)}</td>
+                  <td>${r.kind ? `<span class="tag info">${this.esc(r.kind)}</span>` : '—'}${r.auto ? ' 📸' : ''}</td>
+                  <td style="max-width:300px;font-weight:700">${this.esc(r.title)}</td>
+                  <td class="hint" style="max-width:280px">${this.esc((r.summary || '').slice(0, 180))}${(r.summary || '').length > 180 ? '…' : ''}</td>
                   <td style="max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.url ? `<a href="${this.esc(r.url)}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa" title="${this.esc(r.url)}">${this.esc(r.source || r.url)}</a>` : '—'}</td>
                   <td>${r.topic ? `<span class="tag info">${this.esc(r.topic)}</span>` : '—'}</td>
                   <td>${this.esc(r.medium || '—')}</td>
@@ -4324,7 +4326,7 @@ window.AdminApp = AdminApp;
                   <td style="white-space:nowrap;font-weight:700">${fmtTime(r.sharedAt)}</td>
                   <td class="hint" style="max-width:200px">${this.esc(r.note || '')}</td>
                   <td><button class="btn small danger" data-nt-del="${this.esc(r.id)}" title="Kaydı sil">🗑</button></td>
-                </tr>`).join('') || `<tr><td colspan="10" style="text-align:center;padding:30px" class="hint">${n.loaded ? 'Henüz kayıt yok. Kullanıcılar "Haber Takip Excel\'i" sekmesine haber işledikçe burada görünür.' : 'Yükleniyor…'}</td></tr>`}
+                </tr>`).join('') || `<tr><td colspan="12" style="text-align:center;padding:30px" class="hint">${n.loaded ? 'Henüz kayıt yok. Kullanıcılar "Haber Takip Excel\'i" sekmesine haber işledikçe burada görünür.' : 'Yükleniyor…'}</td></tr>`}
             </tbody>
           </table>
         </div>

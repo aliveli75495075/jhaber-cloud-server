@@ -156,6 +156,8 @@ function sanitizeNews(body, user, existing) {
     medium: clip(body.medium, 80),
     status: clip(body.status, 40) || 'Paylaşıldı',
     note: clip(body.note, 1000),
+    summary: clip(body.summary, 800),
+    kind: clip(body.kind, 20),
     source: clip(body.source, 120) || hostOf(url),
     sharedAt
   };
@@ -172,12 +174,18 @@ function newsAction(db, body, user) {
   if (action === 'add') {
     const f = sanitizeNews(body, user, null);
     if (!f.title) return { ok: false, error: 'Haber başlığı zorunludur.' };
+    if (body.auto && f.url) {
+      // Ekran görüntüsünden otomatik eklenen kayıt: aynı kullanıcı + aynı link 12 saat içinde tekrar eklenmez
+      const dup = arr.find(r => r.auto && r.userId === user.id && r.url === f.url && Date.now() - r.createdAt < 12 * 3600 * 1000);
+      if (dup) return { ok: true, item: dup, dup: true };
+    }
     const rec = {
       id: uid('nt'),
       userId: user.id,
       username: user.username,
       fullName: user.fullName || '',
       ...f,
+      auto: Boolean(body.auto),
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -218,7 +226,7 @@ function listNewsAdmin(q = {}) {
       if (user && r.username.toLowerCase() !== user) return false;
       if (since && r.sharedAt < since) return false;
       if (until && r.sharedAt > until) return false;
-      if (text && !(`${r.username} ${r.title} ${r.url} ${r.topic} ${r.medium} ${r.note} ${r.source}`.toLowerCase().includes(text))) return false;
+      if (text && !(`${r.username} ${r.title} ${r.url} ${r.topic} ${r.medium} ${r.note} ${r.source} ${r.summary || ''}`.toLowerCase().includes(text))) return false;
       return true;
     });
   }
