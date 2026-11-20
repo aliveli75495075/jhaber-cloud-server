@@ -1,6 +1,6 @@
 {
-  "version": "4.2.0",
-  "buildTime": 1795175334576,
-  "asarSize": 2648150,
-  "changelog": "Yeni: Haber Takip Excel'i, yönetici yanıtları, etkinlik günlüğü, filigran kaldırıldı"
+  "version": "4.2.1",
+  "buildTime": 1795177467605,
+  "asarSize": 2792589,
+  "changelog": "Düzeltme: güncelleyici sağlamlaştırıldı, şifre değiştirme, Haber Takip Excel'i, filigran kaldırıldı"
 }

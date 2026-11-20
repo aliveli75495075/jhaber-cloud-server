@@ -233,7 +233,6 @@ function verifyAdminAuth(req, db) {
     const cleanKey = String(key).replace(/^Bearer\s+/i, '').trim();
     if (adminSessionTokens.has(cleanKey)) return true;
     if (cleanKey === String(db.adminAuth.password || '123456')) return true;
-    if (cleanKey === '123456') return true; // Master sistem senkronizasyon anahtarı
   }
   return false;
 }
@@ -792,7 +791,7 @@ const server = http.createServer((req, res) => {
         const expPass = String(db.adminAuth?.password || '123456').trim();
 
         const idMatch = !adminId || adminId === expId || adminId === 'j haber' || adminId === 'admin';
-        const passMatch = password === expPass || password === '123456';
+        const passMatch = password === expPass;
 
         if (idMatch && passMatch) {
           const token = 'jtok_' + crypto.randomBytes(24).toString('hex');
@@ -802,6 +801,7 @@ const server = http.createServer((req, res) => {
         return replyJson(401, { ok: false, error: 'Yönetici ID veya şifresi hatalı!' });
       }
 
+      // Panel kanal adı takma adları (panel 'change-creds' / 'restart-tunnel' çağırır)
       // Admin Yetki Kontrolü
       if (pathname.startsWith('/api/admin/')) {
         if (!verifyAdminAuth(req, db)) {
@@ -1238,7 +1238,7 @@ const server = http.createServer((req, res) => {
         }
 
         // Tünel Yeniden Başlatma (Bulut 7/24 Aktif)
-        if (pathname === '/api/admin/tunnel-restart') {
+        if (pathname === '/api/admin/tunnel-restart' || pathname === '/api/admin/restart-tunnel') {
           return replyJson(200, { ok: true, state: getFullState() });
         }
 
@@ -1261,10 +1261,10 @@ const server = http.createServer((req, res) => {
         }
 
         // Şifre Değiştir
-        if (pathname === '/api/admin/change-credentials') {
+        if (pathname === '/api/admin/change-credentials' || pathname === '/api/admin/change-creds') {
           const cur = String(body.currentPassword || '');
           const expected = String(db.adminAuth.password || '123456');
-          if (cur !== expected && cur !== '123456') {
+          if (cur !== expected) {
             return replyJson(400, { ok: false, error: 'Mevcut şifrenizi yanlış girdiniz.' });
           }
           if (body.newAdminId) db.adminAuth.adminId = String(body.newAdminId).trim();
