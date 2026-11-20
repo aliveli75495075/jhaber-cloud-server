@@ -166,7 +166,7 @@ function sanitizeNews(body, user, existing) {
 function newsAction(db, body, user) {
   const action = String(body.action || 'list');
   const arr = newsStore.load();
-  const mine = () => arr.filter(r => r.userId === user.id || r.username.toLowerCase() === user.username.toLowerCase());
+  const mine = () => arr.filter(r => !r.deleted && (r.userId === user.id || r.username.toLowerCase() === user.username.toLowerCase()));
 
   if (action === 'list') {
     return { ok: true, items: mine().slice(0, 5000) };
@@ -176,7 +176,7 @@ function newsAction(db, body, user) {
     if (!f.title) return { ok: false, error: 'Haber başlığı zorunludur.' };
     if (body.auto && f.url) {
       // Ekran görüntüsünden otomatik eklenen kayıt: aynı kullanıcı + aynı link 12 saat içinde tekrar eklenmez
-      const dup = arr.find(r => r.auto && r.userId === user.id && r.url === f.url && Date.now() - r.createdAt < 12 * 3600 * 1000);
+      const dup = arr.find(r => !r.deleted && r.auto && r.userId === user.id && r.url === f.url && Date.now() - r.createdAt < 12 * 3600 * 1000);
       if (dup) return { ok: true, item: dup, dup: true };
     }
     const rec = {
@@ -195,7 +195,27 @@ function newsAction(db, body, user) {
     scheduleBackup();
     return { ok: true, item: rec };
   }
-  const rec = arr.find(r => r.id === body.id && (r.userId === user.id || r.username.toLowerCase() === user.username.toLowerCase()));
+  if (action === 'restore') {
+    // Kullanıcı uygulamasındaki yerel kopyadan (sunucu diski silindiyse / çevrimdışı eklenenler) geri yükleme
+    let restored = 0;
+    const have = new Set(arr.map(r => r.id));
+    for (const it of (Array.isArray(body.items) ? body.items : []).slice(0, 500)) {
+      if (!it || typeof it.id !== 'string' || !/^nt_[A-Za-z0-9_]{3,40}$/.test(it.id) || have.has(it.id)) continue;
+      const f = sanitizeNews(it, user, null);
+      if (!f.title) continue;
+      arr.unshift({
+        id: it.id, userId: user.id, username: user.username, fullName: user.fullName || '',
+        ...f, auto: Boolean(it.auto),
+        createdAt: Number(it.createdAt) > 0 ? Number(it.createdAt) : Date.now(),
+        updatedAt: Number(it.updatedAt) > 0 ? Number(it.updatedAt) : Date.now(),
+        ...(it.deleted ? { deleted: true, deletedAt: Number(it.deletedAt) || Date.now(), deletedBy: 'user' } : {})
+      });
+      have.add(it.id); restored++;
+    }
+    if (restored) { arr.sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0)); newsStore.trim(); newsStore.save(); scheduleBackup(); }
+    return { ok: true, restored };
+  }
+  const rec = arr.find(r => !r.deleted && r.id === body.id && (r.userId === user.id || r.username.toLowerCase() === user.username.toLowerCase()));
   if (!rec) return { ok: false, error: 'Kayıt bulunamadı.' };
   if (action === 'update') {
     const f = sanitizeNews(body, user, rec);
@@ -206,8 +226,8 @@ function newsAction(db, body, user) {
     return { ok: true, item: rec };
   }
   if (action === 'delete') {
-    const idx = arr.indexOf(rec);
-    arr.splice(idx, 1);
+    // Kayıt silinmez: kullanıcı listesinden kalkar, arşivde (yönetici panelinde) durur
+    rec.deleted = true; rec.deletedAt = Date.now(); rec.deletedBy = 'user';
     newsStore.save();
     scheduleBackup();
     return { ok: true };
@@ -217,6 +237,7 @@ function newsAction(db, body, user) {
 
 function listNewsAdmin(q = {}) {
   let arr = newsStore.load();
+  if (!q.includeDeleted) arr = arr.filter(r => !r.deleted);
   const user = clip(q.username, 80).toLowerCase();
   const text = clip(q.q, 120).toLowerCase();
   const since = Number(q.since) || 0;
@@ -236,11 +257,11 @@ function listNewsAdmin(q = {}) {
 function deleteNewsAdmin(ids) {
   const set = new Set(Array.isArray(ids) ? ids : [ids]);
   const arr = newsStore.load();
-  const keep = arr.filter(r => !set.has(r.id));
-  newsStore.replace(keep);
+  let n = 0;
+  for (const r of arr) if (set.has(r.id) && !r.deleted) { r.deleted = true; r.deletedAt = Date.now(); r.deletedBy = 'admin'; n++; }
   newsStore.flushNow();
   scheduleBackup();
-  return arr.length - keep.length;
+  return n;
 }
 
 // ---------------------------------------------------------------------
@@ -282,7 +303,6 @@ function scheduleBackup() {
 async function restoreFromBackup() {
   if (!process.env.GH_BACKUP_TOKEN || testPort()) return;
   try {
-    if (newsStore.load().length) return;
     const res = await fetch(BACKUP_API + '?ref=db-backup', {
       headers: { 'Authorization': 'Bearer ' + process.env.GH_BACKUP_TOKEN, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'JHaber-Cloud-Server' }
     });
@@ -290,22 +310,57 @@ async function restoreFromBackup() {
     const d = await res.json();
     const arr = JSON.parse(Buffer.from(d.content || '', 'base64').toString('utf8'));
     if (Array.isArray(arr) && arr.length) {
-      newsStore.replace(arr);
-      newsStore.flushNow();
-      console.log(`[J HABER CLOUD] Haber Takip yedeğinden ${arr.length} kayıt geri yüklendi.`);
+      const n = mergeNews(arr);
+      if (n) console.log(`[J HABER CLOUD] Haber Takip yedeğinden ${n} kayıt geri yüklendi.`);
     }
   } catch (_) {}
 }
 
+const flushHooks = [];
+function addFlushHook(fn) { flushHooks.push(fn); }
 function flushAll() {
   activityStore.flushNow();
   newsStore.flushNow();
+  for (const h of flushHooks) { try { h(); } catch (_) {} }
 }
 process.on('SIGTERM', () => { flushAll(); process.exit(0); });
 process.on('SIGINT', () => { flushAll(); process.exit(0); });
 
+// Birleştirme yardımcıları (arşiv/geri yükleme): id'ye göre birleşim, hiçbir kayıt silinmez
+function dumpNews() { return newsStore.load(); }
+
+function mergeNews(list) {
+  const arr = newsStore.load();
+  const byId = new Map(arr.map(r => [r.id, r]));
+  let n = 0;
+  for (const it of (Array.isArray(list) ? list : [])) {
+    if (!it || typeof it.id !== 'string' || !it.id || !it.title) continue;
+    const ex = byId.get(it.id);
+    if (!ex) { const c = JSON.parse(JSON.stringify(it)); arr.push(c); byId.set(c.id, c); n++; }
+    else if ((it.updatedAt || 0) > (ex.updatedAt || 0) || (it.deleted && !ex.deleted)) { Object.assign(ex, it); n++; }
+  }
+  if (n) {
+    arr.sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0));
+    newsStore.trim();
+    newsStore.flushNow();
+  }
+  return n;
+}
+
+function mergeActivity(list) {
+  const arr = activityStore.load();
+  const have = new Set(arr.map(r => r.id));
+  let n = 0;
+  for (const it of (Array.isArray(list) ? list : [])) {
+    if (!it || typeof it.id !== 'string' || !it.id || have.has(it.id) || !it.username) continue;
+    arr.push(it); have.add(it.id); n++;
+  }
+  if (n) { arr.sort((x, y) => (y.time || 0) - (x.time || 0)); activityStore.trim(); activityStore.flushNow(); }
+  return n;
+}
+
 module.exports = {
   addActivity, listActivity, clearActivity,
   newsAction, listNewsAdmin, deleteNewsAdmin,
-  restoreFromBackup, flushAll
+  restoreFromBackup, flushAll, addFlushHook, dumpNews, mergeNews, mergeActivity
 };

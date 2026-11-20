@@ -1,6 +1,6 @@
 {
-  "version": "4.2.3",
-  "buildTime": 1795180359228,
-  "asarSize": 2892642,
-  "changelog": "Güncelleme uygulayıcı onarıldı (boşluklu yol hatası), tüm kullanıcılar için sağlam otomatik güncelleme"
+  "version": "4.3.0",
+  "buildTime": 1795188440648,
+  "asarSize": 2918443,
+  "changelog": "Kalıcı arşiv: destek mesajları ve haber takip kayıtları silinmez; sürüm/güncel durum paneli"
 }

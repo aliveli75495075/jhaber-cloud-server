@@ -9,6 +9,8 @@ const path = require('path');
 const crypto = require('crypto');
 const central = require('./central-db');
 const tracking = require('./tracking');
+const archive = require('./archive');
+central.onSave = (db) => archive.captureDb(db);
 
 const PORT = Number(process.env.PORT) || 47850;
 let adminSessionTokens = new Set();
@@ -773,6 +775,13 @@ const server = http.createServer((req, res) => {
         return replyJson(200, { ok: true, saved: n });
       }
 
+      // 6.15 Kullanıcı uygulamasındaki yerel destek mesajı kopyasından geri yükleme
+      if (pathname === '/api/ticket-restore' && req.method === 'POST') {
+        const u = db.users.find(x => (body.userId && x.id === body.userId) || (body.username && x.username.toLowerCase() === String(body.username).trim().toLowerCase()));
+        if (!u) return replyJson(404, { ok: false, error: 'Kullanıcı bulunamadı.' });
+        return replyJson(200, { ok: true, ...archive.restoreFromClient(db, u, body.tickets) });
+      }
+
       // 6.2 Haber Takip Excel'i (kullanıcı kendi paylaştığı haberleri işler)
       if (pathname === '/api/news-track' && req.method === 'POST') {
         const u = db.users.find(x => (body.userId && x.id === body.userId) || (body.username && x.username.toLowerCase() === String(body.username).trim().toLowerCase()));
@@ -816,6 +825,15 @@ const server = http.createServer((req, res) => {
 
 
         // Etkinlik Günlüğü & Haber Takip (Excel görünümü)
+        if (pathname === '/api/admin/archive-export') {
+          return replyJson(200, { ok: true, ...archive.exportAll() });
+        }
+        if (pathname === '/api/admin/archive-import') {
+          return replyJson(200, { ok: true, ...archive.importAll(db, body) });
+        }
+        if (pathname === '/api/admin/storage-status') {
+          return replyJson(200, { ok: true, ...archive.getStatus(), activity: tracking.listActivity({ limit: 1 }).total });
+        }
         if (pathname === '/api/admin/activity-list') {
           return replyJson(200, { ok: true, ...tracking.listActivity(body) });
         }
@@ -838,7 +856,7 @@ const server = http.createServer((req, res) => {
         // Çift Yönlü Tam Senkronizasyon (Masaüstü Yönetim Paneli <-> Bulut)
         if (pathname === '/api/admin/sync-full-db') {
           if (Array.isArray(body.users)) db.users = body.users;
-          if (Array.isArray(body.tickets)) db.tickets = body.tickets;
+          if (Array.isArray(body.tickets)) { db.tickets = body.tickets; archive.captureDb(db); archive.applyToDb(db); }
           if (Array.isArray(body.trafficLogs)) db.trafficLogs = body.trafficLogs;
           if (body.securitySettings) db.securitySettings = body.securitySettings;
           if (body.sportsData) db.sportsData = body.sportsData;
@@ -1228,6 +1246,7 @@ const server = http.createServer((req, res) => {
 
         // Destek Talebini Sil
         if (pathname === '/api/admin/ticket-delete') {
+          archive.markDeleted(body.ticketId); // arşivde kalır, listeden kalkar
           db.tickets = (db.tickets || []).filter(x => x.id !== body.ticketId);
           central.saveCentralDb(db);
           return replyJson(200, { ok: true, state: getFullState() });
@@ -1770,6 +1789,8 @@ server.listen(PORT, '0.0.0.0', async () => {
     await central.restoreDbFromCloudBackup();
   }
   await tracking.restoreFromBackup();
+  await archive.restoreFromGh();
+  try { const d = central.loadCentralDb(); archive.captureDb(d); if (archive.applyToDb(d)) central.saveCentralDb(d); } catch (e) { console.error('[J HABER CLOUD] Arşiv uygulama hatası:', e.message); }
 
   // Render.com uyku modunu (spin-down) önlemek için her 8 dakikada bir kendi kendine Keep-Alive Ping at
   const p = String(process.env.PORT || '');

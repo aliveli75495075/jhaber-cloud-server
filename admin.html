@@ -4365,6 +4365,8 @@ window.AdminApp = AdminApp;
     try {
       const r = await jadmin.invoke('admin:update-info', {});
       if (r && r.ok) this.upd.meta = r.meta || {};
+      try { const st = await jadmin.invoke('admin:storage-status', {}); if (st && st.ok) this.upd.storage = st; } catch (_) {}
+      try { if (window.jhNative) this.upd.localInfo = await window.jhNative.archiveInfo(); } catch (_) {}
       this.upd.loaded = true;
     } catch (_) {}
     finally { this.upd.loading = false; }
@@ -4426,6 +4428,26 @@ window.AdminApp = AdminApp;
     const tag = (s) => s === 'ok' ? '<span class="tag ok">✓ Güncel</span>'
       : s === 'old' ? '<span class="tag warn">⏳ Güncelleme bekliyor</span>'
         : '<span class="tag">❓ Sürüm bilinmiyor (eski sürüm)</span>';
+    const st = u.storage || null;
+    const li = u.localInfo || null;
+    const fmtSize = (b) => b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+    const archPanel = `
+      <div class="panel" style="margin-top:12px;border-color:#22c55e">
+        <h2>💾 Kalıcı Arşiv (mesajlar ve haber takip kayıtları silinmez)</h2>
+        <p class="hint">Destek mesajları ve Haber Takip Excel'i kayıtları; güncelleme, uygulamayı kapatıp açma veya sunucu yeniden başlama ile kaybolmaz. Üç ayrı yerde saklanır:</p>
+        <table class="tbl"><tbody>
+          <tr><td><b>1) Bulut sunucu arşivi</b></td><td>${st ? `${st.tickets} talep (${st.deletedTickets} tanesi silinmiş ama saklı) · ${st.news} haber kaydı (+${st.newsDeletedKept} kullanıcı sildi ama saklı) · ${st.activity} etkinlik` : '—'}</td></tr>
+          <tr><td><b>2) GitHub yedeği</b></td><td>${!st ? '—' : st.ghConfigured
+            ? (st.lastPushOk === false ? '<span class="tag warn">⚠ Son yedek başarısız: ' + this.esc(st.lastPushErr || '') + '</span>' : (st.lastPushAt ? '<span class="tag ok">✓ Aktif · son yedek ' + this.relTime(st.lastPushAt) + '</span>' : '<span class="tag ok">✓ Aktif</span> <span class="hint">(ilk kayıt değişikliğinde yedeklenir)</span>'))
+            : '<span class="tag warn">❌ Kapalı</span> <span class="hint">Render ortam değişkenlerine GH_BACKUP_TOKEN eklenirse sunucu kendi kendine geri yüklenir. Eklenmediyse veriler yönetici masaüstü arşivi ve kullanıcı uygulamalarından geri gelir.</span>'}</td></tr>
+          <tr><td><b>3) Bu bilgisayar (Masaüstü\J HABER ARSIV)</b></td><td>${window.jhNative
+            ? (li && li.ok ? '<span class="tag ok">✓ ' + fmtSize(li.size) + ' · son kayıt ' + this.relTime(li.mtime) + '</span> <button class="btn" id="arch-open" style="padding:3px 10px">📂 Klasörü aç</button>' : '<span class="tag warn">Henüz kaydedilmedi (yönetici girişi sonrası ilk dakikada oluşur)</span>')
+            : '<span class="hint">Yalnızca masaüstü yönetim panelinde çalışır. Web panelinden değil, masaüstü uygulamasından açık tutun.</span>'}</td></tr>
+          <tr><td><b>4) Kullanıcı uygulamaları</b></td><td class="hint">Her kullanıcı kendi mesajlarını ve haber takip kayıtlarını kendi bilgisayarında da saklar; sunucu boşalırsa uygulama açılınca otomatik geri yükler.</td></tr>
+        </tbody></table>
+        ${A.arch && A.arch.msg && Date.now() - A.arch.msgAt < 600000 ? '<div class="hint" style="margin-top:8px;color:#22c55e">' + this.esc(A.arch.msg) + '</div>' : ''}
+        <div style="margin-top:10px"><button class="btn" id="arch-sync">🔄 Şimdi senkronla</button></div>
+      </div>`;
     const html = `
       <div class="panel" style="border-color:var(--accent)">
         <h2>🚀 Sürüm & Otomatik Güncelleme Merkezi</h2>
@@ -4463,12 +4485,115 @@ window.AdminApp = AdminApp;
             </tbody>
           </table>
         </div>
-      </div>`;
+      </div>${archPanel}`;
     setHtml(c, 'upd:' + f, html);
     c.querySelectorAll('[data-upd-f]').forEach(b => { b.onclick = () => { this.upd.filter = b.dataset.updF; this.render(); }; });
     const rf = c.querySelector('#upd-refresh'); if (rf) rf.onclick = () => { this.loadUpdateInfo(); this.toast('↻ Yenilendi'); };
     const xl = c.querySelector('#upd-xlsx'); if (xl) xl.onclick = () => this.exportUpdXlsx();
+    const ao = c.querySelector('#arch-open'); if (ao) ao.onclick = () => window.jhNative.openArchiveFolder();
+    const as = c.querySelector('#arch-sync'); if (as) as.onclick = async () => { as.disabled = true; await this.archiveSync(true); await this.loadUpdateInfo(); this.toast('💾 Arşiv senkronlandı'); };
   };
+
+  // =====================================================================
+  // 💾 KALICI ARŞİV SENKRONU (yalnızca masaüstü uygulamada çalışır)
+  // Destek mesajları + haber takip kayıtları + etkinlik günlüğü her dakika
+  // Masaüstü\J HABER ARSIV klasörüne yazılır. Sunucu (Render) diski silinirse
+  // eksikler bu arşivden otomatik olarak sunucuya geri yüklenir. Hiçbir kayıt silinmez.
+  // =====================================================================
+  A.arch = { busy: false, last: 0, lastActivity: 0, msg: '', msgAt: 0 };
+  const tkMsgKey = (m) => `${m.sender}|${m.time}|${m.text}`;
+  const chunks = (arr, n) => { const o = []; for (let i = 0; i < arr.length; i += n) o.push(arr.slice(i, i + n)); return o; };
+
+  function mergeTickets(localArr, srvArr) {
+    const map = new Map((localArr || []).map(t => [t.id, t]));
+    let changed = false;
+    for (const s of (srvArr || [])) {
+      const l = map.get(s.id);
+      if (!l) { map.set(s.id, s); changed = true; continue; }
+      const keys = new Set((l.messages || []).map(tkMsgKey));
+      for (const m of (s.messages || [])) if (!keys.has(tkMsgKey(m))) { (l.messages = l.messages || []).push(m); changed = true; }
+      if ((s.updatedAt || 0) > (l.updatedAt || 0)) { l.updatedAt = s.updatedAt; l.status = s.status; changed = true; }
+      if (s.deleted && !l.deleted) { l.deleted = true; changed = true; }
+      if (changed && l.messages) l.messages.sort((a, b) => (a.time || 0) - (b.time || 0));
+    }
+    return { list: Array.from(map.values()), changed };
+  }
+  function mergeById(localArr, srvArr) {
+    const map = new Map((localArr || []).map(r => [r.id, r]));
+    let changed = false;
+    for (const s of (srvArr || [])) {
+      const l = map.get(s.id);
+      if (!l) { map.set(s.id, s); changed = true; }
+      else if ((s.updatedAt || 0) > (l.updatedAt || 0) || (s.deleted && !l.deleted)) { map.set(s.id, { ...l, ...s }); changed = true; }
+    }
+    return { list: Array.from(map.values()), changed };
+  }
+
+  A.archiveSync = async function (force) {
+    if (!window.jhNative || !this.loggedIn || this.arch.busy) return;
+    const ar = this.arch;
+    ar.busy = true;
+    try {
+      const exp = await jadmin.invoke('admin:archive-export', {});
+      if (!exp || !exp.ok) return;
+      let local = null;
+      try { local = await window.jhNative.loadArchive(); } catch (_) {}
+      const hadLocal = !!local;
+      local = local || {};
+      local.tickets = local.tickets || []; local.news = local.news || []; local.activity = local.activity || [];
+      local.deletedTickets = local.deletedTickets || {};
+
+      // 1) Yerel arşivde olup sunucuda eksik olanları sunucuya geri yükle (sunucu diski silinmişse)
+      const sT = new Map((exp.tickets || []).map(t => [t.id, t]));
+      const sN = new Map((exp.news || []).map(r => [r.id, r]));
+      const missT = local.tickets.filter(t => {
+        if (t.deleted || (exp.deletedTickets || {})[t.id]) return false;
+        const s = sT.get(t.id);
+        if (!s) return true;
+        const keys = new Set((s.messages || []).map(tkMsgKey));
+        return (t.messages || []).some(m => !keys.has(tkMsgKey(m)));
+      });
+      const missN = local.news.filter(r => { const s = sN.get(r.id); return !s || (r.updatedAt || 0) > (s.updatedAt || 0) || (r.deleted && !s.deleted); });
+      const missD = Object.keys(local.deletedTickets).filter(id => !(exp.deletedTickets || {})[id]);
+      let restoredT = 0, restoredN = 0;
+      for (const part of chunks(missT, 100)) { const r = await jadmin.invoke('admin:archive-import', { tickets: part }); if (r && r.ok) restoredT += part.length; }
+      for (const part of chunks(missN, 300)) { const r = await jadmin.invoke('admin:archive-import', { news: part }); if (r && r.ok) restoredN += part.length; }
+      if (missD.length) { const dd = {}; missD.forEach(id => { dd[id] = local.deletedTickets[id]; }); await jadmin.invoke('admin:archive-import', { deletedTickets: dd }); }
+      if (restoredT || restoredN) {
+        ar.msg = `✔ Sunucu verisi eksikti; masaüstü arşivinden ${restoredT} talep, ${restoredN} haber kaydı geri yüklendi.`;
+        ar.msgAt = Date.now();
+        this.toast('💾 ' + ar.msg.replace('✔ ', ''));
+      }
+      const exp2 = (restoredT || restoredN || missD.length) ? (await jadmin.invoke('admin:archive-export', {})) : exp;
+
+      // 2) Sunucudakini yerel arşive birleştir
+      const mt = mergeTickets(local.tickets, (exp2 && exp2.tickets) || []);
+      const mn = mergeById(local.news, (exp2 && exp2.news) || []);
+      let changed = mt.changed || mn.changed || !hadLocal;
+      local.tickets = mt.list; local.news = mn.list;
+      for (const id of Object.keys((exp2 && exp2.deletedTickets) || {})) if (!local.deletedTickets[id]) { local.deletedTickets[id] = exp2.deletedTickets[id]; changed = true; }
+
+      // 3) Etkinlik günlüğü (büyük olabilir): 10 dakikada bir
+      if (force || Date.now() - ar.lastActivity > 10 * 60 * 1000 || !hadLocal) {
+        const al = await jadmin.invoke('admin:activity-list', { limit: 50000 });
+        if (al && al.ok) {
+          ar.lastActivity = Date.now();
+          const sA = new Set((al.items || []).map(r => r.id));
+          const missA = local.activity.filter(r => !sA.has(r.id));
+          for (const part of chunks(missA, 3000)) await jadmin.invoke('admin:archive-import', { activity: part });
+          const ma = mergeById(local.activity, al.items || []);
+          if (ma.changed) { local.activity = ma.list.sort((a, b) => (b.time || 0) - (a.time || 0)); changed = true; }
+        }
+      }
+      if (changed) await window.jhNative.saveArchive({ tickets: local.tickets, news: local.news, activity: local.activity, deletedTickets: local.deletedTickets });
+      ar.last = Date.now();
+    } catch (_) {}
+    finally { ar.busy = false; }
+  };
+  // Açılışta ve her dakika
+  setInterval(() => { if (A.loggedIn) A.archiveSync(false); }, 60000);
+  setTimeout(() => { if (A.loggedIn) A.archiveSync(true); }, 8000);
+  document.addEventListener('click', (e) => { if (e.target && e.target.id === 'btn-login') setTimeout(() => A.archiveSync(true), 4000); });
 
   // Görünüm sekmesi açıkken kayıtları canlı tazele
   setInterval(() => {

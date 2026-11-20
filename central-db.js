@@ -269,7 +269,8 @@ function scheduleCloudBackup(db) {
       securitySettings: db.securitySettings,
       branding: db.branding,
       postsLen: db.adminContent?.posts?.length || 0,
-      ticketsLen: db.tickets?.length || 0
+      ticketsLen: db.tickets?.length || 0,
+      ticketsMsgs: (db.tickets || []).reduce((n, t) => n + (t.messages ? t.messages.length : 0), 0)
     });
     if (sig === _lastBackupUsersJson) return;
     _lastBackupUsersJson = sig;
@@ -338,6 +339,13 @@ async function restoreDbFromCloudBackup() {
     }
 
     localDb.users = Array.from(byUsername.values());
+
+    // Destek talepleri/mesajları: id'ye göre birleştir (kayıp olmasın); mesaj düzeyinde birleştirmeyi arşiv yapar
+    if (Array.isArray(remoteDb.tickets)) {
+      if (!Array.isArray(localDb.tickets)) localDb.tickets = [];
+      const have = new Set(localDb.tickets.map(t => t && t.id));
+      for (const t of remoteDb.tickets) if (t && t.id && !have.has(t.id)) { localDb.tickets.push(t); have.add(t.id); }
+    }
     if (remoteDb.adminAuth && remoteDb.adminAuth.password && remoteDb.adminAuth.password !== '123456') {
       localDb.adminAuth = remoteDb.adminAuth;
     }
@@ -366,6 +374,7 @@ function saveCentralDb(db) {
     try { fs.writeFileSync(fp, JSON.stringify(db, null, 2), 'utf8'); } catch {}
   }
   scheduleCloudBackup(db);
+  try { if (typeof module.exports.onSave === 'function') module.exports.onSave(db); } catch (_) {}
 }
 
 function addTrafficLog(db, entry) {
