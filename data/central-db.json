@@ -24,36 +24,7 @@
   },
   "sportsData": {
     "matches": [
-      {
-        "id": "m1",
-        "league": "Trendyol Süper Lig",
-        "home": "Fenerbahçe",
-        "away": "Galatasaray",
-        "score": "2 - 1",
-        "time": "MS",
-        "date": "Dün",
-        "links": [
-          {
-            "title": "📺 FB - GS Maç Özeti İzle",
-            "url": "https://beinsports.com.tr"
-          }
-        ]
-      },
-      {
-        "id": "m2",
-        "league": "Trendyol Süper Lig",
-        "home": "Beşiktaş",
-        "away": "Trabzonspor",
-        "score": "1 - 1",
-        "time": "MS",
-        "date": "Dün",
-        "links": [
-          {
-            "title": "📺 BJK - TS Maç Özeti İzle",
-            "url": "https://beinsports.com.tr"
-          }
-        ]
-      }
+      "FENERBAHÇE 6 - 0 6alatasaray"
     ],
     "standings": [
       {
@@ -81,7 +52,7 @@
         "pts": 21
       }
     ],
-    "updatedAt": 1795074025094
+    "updatedAt": 1795193973558
   },
   "navConfig": {
     "sidebarItems": [
@@ -426,16 +397,16 @@
       "registeredAt": 1795157511810,
       "approvedAt": 1795157521881,
       "expiresAt": 1797749521881,
-      "lastSeenAt": 1795193652803,
-      "lastIp": "212.174.189.136",
-      "lastPort": 50498,
+      "lastSeenAt": 1795195125341,
+      "lastIp": "62.101.165.171",
+      "lastPort": 34698,
       "hostname": "DESKTOP-RJQ62DT",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 1077,
-      "trafficBytes": 1053372,
-      "currentView": "x",
-      "currentViewLabel": "X Takibi & Anahtar Kelimeler",
-      "currentSubMode": "X Oturum & Tekli Akış",
+      "trafficRequests": 1481,
+      "trafficBytes": 1472583,
+      "currentView": "sports",
+      "currentViewLabel": "⚽ Spor & Canlı Skor / Fikstür",
+      "currentSubMode": "",
       "keywords": {
         "starred": [],
         "general": [],
@@ -451,6 +422,46 @@
         "searchQuery": ""
       },
       "recentActions": [
+        {
+          "time": 1795193873079,
+          "text": "Sekme değiştirdi: ⚽ Spor & Canlı Skor / Fikstür"
+        },
+        {
+          "time": 1795193872088,
+          "text": "Uygulamaya giriş yaptı (212.174.189.136:45302)"
+        },
+        {
+          "time": 1795193868050,
+          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
+        },
+        {
+          "time": 1795193868045,
+          "text": "Uygulamaya giriş yaptı (212.174.189.136:38126)"
+        },
+        {
+          "time": 1795193849017,
+          "text": "Sekme değiştirdi: ⚽ Spor & Canlı Skor / Fikstür"
+        },
+        {
+          "time": 1795193847611,
+          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
+        },
+        {
+          "time": 1795193847605,
+          "text": "Uygulamaya giriş yaptı (212.174.189.136:46198)"
+        },
+        {
+          "time": 1795193824989,
+          "text": "Sekme değiştirdi: ⚽ Spor & Canlı Skor / Fikstür"
+        },
+        {
+          "time": 1795193823030,
+          "text": "Uygulamaya giriş yaptı (212.174.189.136:48540)"
+        },
+        {
+          "time": 1795193823027,
+          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
+        },
         {
           "time": 1795191271667,
           "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
@@ -510,46 +521,6 @@
         {
           "time": 1795191063895,
           "text": "Sekme değiştirdi: Görsel & Birleşik Arama"
-        },
-        {
-          "time": 1795191056586,
-          "text": "Sekme değiştirdi: Haberler"
-        },
-        {
-          "time": 1795191054578,
-          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
-        },
-        {
-          "time": 1795191019473,
-          "text": "Sekme değiştirdi: 📑 Haber Takip Excel'i — Paylaştığınız Haberleri İşleyin"
-        },
-        {
-          "time": 1795191003172,
-          "text": "Sekme değiştirdi: Haberler"
-        },
-        {
-          "time": 1795191000895,
-          "text": "Sekme değiştirdi: Görsel & Birleşik Arama"
-        },
-        {
-          "time": 1795190997860,
-          "text": "Sekme değiştirdi: ⚽ Spor & Canlı Skor / Fikstür"
-        },
-        {
-          "time": 1795190993531,
-          "text": "Sekme değiştirdi: Kaynaklar & Sağlık Durumu"
-        },
-        {
-          "time": 1795190991799,
-          "text": "Sekme değiştirdi: Görsel & Birleşik Arama"
-        },
-        {
-          "time": 1795190985949,
-          "text": "Sekme değiştirdi: Haberler"
-        },
-        {
-          "time": 1795190982465,
-          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
         }
       ],
       "securityFlags": [],
@@ -558,16 +529,24 @@
         "lockedHostname": "DESKTOP-RJQ62DT"
       },
       "forceLogoutAt": 0,
-      "geoCity": "Ankara",
-      "geoRegion": "Ankara",
-      "geoCountry": "Türkiye",
-      "geoIsp": "Turk Telekomunikasyon Anonim Sirketi",
-      "geoLat": 39.9198651,
-      "geoLon": 32.8542699,
-      "geoIpResolved": "212.174.189.136",
+      "geoCity": "Tirana",
+      "geoRegion": "Tirana",
+      "geoCountry": "Albania",
+      "geoIsp": "iRegister.al DataCenter",
+      "geoLat": 41.3253,
+      "geoLon": 19.8184,
+      "geoIpResolved": "62.101.165.171",
       "isOnline": true,
-      "appBuildTime": 1795188440648,
-      "appVersion": "4.3.0"
+      "appBuildTime": 1795193455440,
+      "appVersion": "4.4.0",
+      "geoDistrict": "Tirana",
+      "geoSubCity": "Tirana",
+      "geoCountryCode": "AL",
+      "geoZip": "1001",
+      "geoMobile": false,
+      "geoProxy": false,
+      "geoSource": "ip-api",
+      "geoResolvedAt": 1795195125364
     },
     {
       "id": "usr_1795089252461_f11x",
@@ -647,16 +626,16 @@
       "approvedAt": 1795082522906,
       "expiresAt": "unlimited",
       "registeredAt": 1795082508765,
-      "lastSeenAt": 1795193668516,
+      "lastSeenAt": 1795194027269,
       "lastIp": "212.174.189.136",
-      "lastPort": 53384,
+      "lastPort": 52292,
       "hostname": "prodesk",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 2765,
-      "trafficBytes": 6649885,
-      "currentView": "x",
-      "currentViewLabel": "X Takibi & Anahtar Kelimeler",
-      "currentSubMode": "X TweetDeck Sütunları",
+      "trafficRequests": 2868,
+      "trafficBytes": 6931903,
+      "currentView": "sports",
+      "currentViewLabel": "⚽ Spor & Canlı Skor / Fikstür",
+      "currentSubMode": "",
       "keywords": {
         "starred": [
           "kadın platformu",
@@ -745,6 +724,30 @@
       },
       "recentActions": [
         {
+          "time": 1795193979813,
+          "text": "Sekme değiştirdi: ⚽ Spor & Canlı Skor / Fikstür"
+        },
+        {
+          "time": 1795193979355,
+          "text": "Sekme değiştirdi: 🌟 Yıldızlı Anahtar Kelimeler (Haber Siteleri + X Birleşik Takip)"
+        },
+        {
+          "time": 1795193696249,
+          "text": "Sekme değiştirdi: ⚽ Spor & Canlı Skor / Fikstür"
+        },
+        {
+          "time": 1795193694902,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795193691278,
+          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
+        },
+        {
+          "time": 1795193691271,
+          "text": "Uygulamaya giriş yaptı (212.174.189.136:34278)"
+        },
+        {
           "time": 1795192844693,
           "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
         },
@@ -819,30 +822,6 @@
         {
           "time": 1795157276761,
           "text": "Sekme değiştirdi: Haberler"
-        },
-        {
-          "time": 1795088906064,
-          "text": "Sekme değiştirdi: 🌟 Yıldızlı Anahtar Kelimeler (Haber Siteleri + X Birleşik Takip)"
-        },
-        {
-          "time": 1795088879238,
-          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
-        },
-        {
-          "time": 1795082559227,
-          "text": "Sekme değiştirdi: Haberler"
-        },
-        {
-          "time": 1795082554986,
-          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
-        },
-        {
-          "time": 1795082552643,
-          "text": "Uygulamaya giriş yaptı (127.0.0.1:54156)"
-        },
-        {
-          "time": 1795082551042,
-          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
         }
       ],
       "securityFlags": [],
@@ -861,8 +840,8 @@
       "isLocked": false,
       "lockMessage": "Hesabınız yönetici tarafından geçici olarak kilitlenmiştir. Lütfen yöneticiyle iletişime geçiniz.",
       "isOnline": true,
-      "appBuildTime": 1795188440648,
-      "appVersion": "4.3.0",
+      "appBuildTime": 1795193455440,
+      "appVersion": "4.4.0",
       "geoDistrict": "Ankara",
       "geoSubCity": "Ankara",
       "geoCountryCode": "TR",
@@ -965,13 +944,13 @@
       "registeredAt": 1795190230090,
       "approvedAt": 1795171648039,
       "expiresAt": 1797763648039,
-      "lastSeenAt": 1795193670177,
+      "lastSeenAt": 1795195126179,
       "lastIp": "62.101.165.184",
-      "lastPort": 52466,
+      "lastPort": 34700,
       "hostname": "PCC",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 983,
-      "trafficBytes": 1024040,
+      "trafficRequests": 1398,
+      "trafficBytes": 1456885,
       "currentView": "news",
       "currentViewLabel": "Haberler",
       "currentSubMode": "Canlı Izgara Görünümü",
@@ -1074,13 +1053,13 @@
       "registeredAt": 1795190227283,
       "approvedAt": 1795164880581,
       "expiresAt": 1797756880581,
-      "lastSeenAt": 1795193650320,
+      "lastSeenAt": 1795195127305,
       "lastIp": "212.174.189.136",
-      "lastPort": 50464,
+      "lastPort": 34712,
       "hostname": "vpro",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 923,
-      "trafficBytes": 887926,
+      "trafficRequests": 1304,
+      "trafficBytes": 1260148,
       "currentView": "news",
       "currentViewLabel": "Haberler",
       "currentSubMode": "TweetDeck Sütunları",
@@ -1121,6 +1100,46 @@
   ],
   "tickets": [],
   "trafficLogs": [
+    {
+      "id": "log_1795193872088_rhdf",
+      "time": 1795193872088,
+      "type": "login",
+      "username": "irem",
+      "ipPort": "212.174.189.136:45302",
+      "detail": "Giriş yapıldı (Durum: active, Paket: 1 Ay (30 Gün))"
+    },
+    {
+      "id": "log_1795193868045_olts",
+      "time": 1795193868045,
+      "type": "login",
+      "username": "irem",
+      "ipPort": "212.174.189.136:38126",
+      "detail": "Giriş yapıldı (Durum: active, Paket: 1 Ay (30 Gün))"
+    },
+    {
+      "id": "log_1795193847605_ak11",
+      "time": 1795193847605,
+      "type": "login",
+      "username": "irem",
+      "ipPort": "212.174.189.136:46198",
+      "detail": "Giriş yapıldı (Durum: active, Paket: 1 Ay (30 Gün))"
+    },
+    {
+      "id": "log_1795193823030_a22y",
+      "time": 1795193823030,
+      "type": "login",
+      "username": "irem",
+      "ipPort": "212.174.189.136:48540",
+      "detail": "Giriş yapıldı (Durum: active, Paket: 1 Ay (30 Gün))"
+    },
+    {
+      "id": "log_1795193691271_tf3g",
+      "time": 1795193691271,
+      "type": "login",
+      "username": "ismet",
+      "ipPort": "212.174.189.136:34278",
+      "detail": "Giriş yapıldı (Durum: active, Paket: Sınırsız (Ömür Boyu))"
+    },
     {
       "id": "log_1795157521881_lfld",
       "time": 1795157521881,
