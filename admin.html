@@ -174,6 +174,53 @@ input, textarea, select, code, pre { user-select: text; }
   margin-bottom: 14px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 0 30px rgba(16, 185, 129, 0.05);
 }
+/* TAM EKRAN KOMUTA MERKEZİ (TV / İSTİHBARAT MODU) */
+.radar-card.fullscreen-radar {
+  position: fixed;
+  inset: 0;
+  z-index: 99990;
+  margin: 0;
+  border-radius: 0;
+  border: none;
+  padding: 22px 32px;
+  overflow-y: auto;
+  background: radial-gradient(ellipse at 50% 35%, #071e26 0%, #030b14 70%, #010409 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.radar-card.fullscreen-radar .radar-container {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.radar-card.fullscreen-radar .radar-screen {
+  width: min(1140px, 94vw);
+  height: min(540px, 56vh);
+  border-radius: 270px;
+  border-width: 3px;
+  box-shadow:
+    0 0 65px rgba(16, 185, 129, 0.35),
+    0 0 0 6px rgba(16, 185, 129, 0.12),
+    inset 0 0 55px rgba(6, 182, 212, 0.28);
+}
+.radar-card.fullscreen-radar .radar-sweep {
+  width: 1320px;
+  height: 1320px;
+  margin-left: -660px;
+  margin-top: -660px;
+}
+.radar-card.fullscreen-radar .radar-blip {
+  min-width: 22px;
+  height: 22px;
+  font-size: 11.5px;
+}
+.radar-card.fullscreen-radar .radar-city-label {
+  top: -21px;
+  font-size: 10.5px;
+  padding: 2px 7px;
+}
 .radar-container {
   display: flex;
   align-items: center;
@@ -1873,10 +1920,11 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     // 81 İl Seçim Listesi (Seçenek <option> HTML)
     const provinceNames = Object.keys(this.TR_PROVINCE_COORDS);
 
-    // Seçili Şehir Detay Kartı (Tıklanan ildeki tüm kullanıcıları detaylı listeler)
+    // Seçili Şehir Detay Kartı (Tıklanan ildeki tüm kullanıcıları detaylı listeler + Bölgeye Özel Anlık Bildirim Gönderir)
     const selGroup = this.selectedGeoCity ? (cityGroups[this.selectedGeoCity] || null) : null;
+    const cityUsernamesCsv = selGroup ? selGroup.users.map(u => u.username).join(',') : '';
     const selCardHtml = selGroup ? `
-      <div class="panel" style="border:2px solid #10b981;background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(15,23,42,0.95));margin-bottom:14px;padding:16px 20px;box-shadow:0 8px 25px rgba(0,0,0,0.4)">
+      <div class="panel" style="border:2px solid #10b981;background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(15,23,42,0.95));margin-bottom:14px;padding:16px 20px;box-shadow:0 8px 25px rgba(0,0,0,0.4);width:100%">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
           <div>
             <h3 style="margin:0;color:#34d399;font-size:16px;display:flex;align-items:center;gap:8px">
@@ -1884,11 +1932,24 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
               <span>📍 ${this.esc(this.selectedGeoCity)} Bölgesindeki Kullanıcılar — Toplam ${selGroup.users.length} Kişi (${selGroup.onlineCount} Çevrimiçi)</span>
             </h3>
             <p class="hint" style="margin:3px 0 0;font-size:12px">
-              Koordinat: <code>${Number(selGroup.info.lat || 39.93).toFixed(2)}°K, ${Number(selGroup.info.lon || 32.85).toFixed(2)}°D</code> • Aşağıdaki kartlardan kullanıcıların IP/Port bilgilerini görebilir, tabloda vurgulayabilir veya anında kilitleyebilirsiniz.
+              Koordinat: <code>${Number(selGroup.info.lat || 39.93).toFixed(2)}°K, ${Number(selGroup.info.lon || 32.85).toFixed(2)}°D</code> • Bu bölgedeki kullanıcılara toplu anlık ekran mesajı gönderebilir veya kartlardan tek tek yönetebilirsiniz.
             </p>
           </div>
           <button class="btn small" id="btn-close-geo-card" style="padding:5px 12px;font-size:12px">✕ Listeyi Kapat</button>
         </div>
+
+        <!-- ÖNERİ 3: Seçili İldeki Kullanıcılara Özel Anlık Ekran Bildirimi / Mesaj Gönderme Kutusu -->
+        <div style="background:rgba(2,6,23,0.65);border:1px solid rgba(251,191,36,0.45);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:18px">⚡</span>
+          <div style="font-size:12px;font-weight:800;color:#fbbf24;white-space:nowrap">
+            ${this.esc(this.selectedGeoCity)} Bölgesine (${selGroup.users.length} Kişi) Anlık Mesaj:
+          </div>
+          <input id="city-broadcast-msg" class="field" style="flex:1;min-width:220px;padding:7px 11px;font-size:12.5px" placeholder="${this.esc(this.selectedGeoCity)} bölgesindeki tüm kullanıcılara anında açılır ekran mesajı gönderin...">
+          <button class="btn small gold" id="btn-city-broadcast-send" data-city-targets="${this.esc(cityUsernamesCsv)}" data-city-name="${this.esc(this.selectedGeoCity)}" style="padding:7px 14px;font-weight:800">
+            📢 ${this.esc(this.selectedGeoCity)} Kullanıcılarına Gönder
+          </button>
+        </div>
+
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">
           ${selGroup.users.map((u, idx) => {
             const uGeo = this.getGeoInfo(u.lastIp, u);
@@ -1908,12 +1969,13 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
                 <div style="font-size:11.5px;color:#cbd5e1;margin-top:3px">🖥 <b>Cihaz:</b> ${this.esc(u.hostname || 'Bilinmiyor')} • <b>Son:</b> ${this.relTime(u.lastSeenAt)}</div>
                 <div style="font-size:11.5px;color:#38bdf8;margin-top:3px">📍 <b>Aktif Sekme:</b> ${this.esc(u.currentViewLabel || u.currentView || 'Haberler')}</div>
                 <div style="font-size:11.5px;color:${u.status === 'active' ? 'var(--green)' : '#fbbf24'};margin-top:3px;font-weight:700">⏱ <b>Kalan Süre:</b> ${this.esc(this.remainingTimeText(u))}</div>
-                <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">
-                  <button class="btn small" data-jump-uid="${this.esc(u.id)}" style="font-size:11px;padding:4px 8px;background:rgba(52,211,153,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.4)">🔍 Tabloda Göster</button>
-                  <button class="btn small" data-inspect-usr="${this.esc(u.id)}" style="font-size:11px;padding:4px 8px;background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.4)">👁️ Kelimeleri</button>
+                <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:5px;flex-wrap:wrap">
+                  <button class="btn small" data-jump-uid="${this.esc(u.id)}" style="font-size:11px;padding:4px 7px;background:rgba(52,211,153,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.4)">🔍 Tabloda</button>
+                  <button class="btn small" data-inspect-usr="${this.esc(u.id)}" style="font-size:11px;padding:4px 7px;background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.4)">👁️ Kelimeler</button>
+                  <button class="btn small gold" data-direct-popup-user="${this.esc(u.username)}" style="font-size:11px;padding:4px 7px" title="Bu kullanıcının ekranına anlık mesaj gönder">📨 Mesaj</button>
                   ${u.isLocked
-                    ? `<button class="btn small success" data-quick-user-lock="${this.esc(u.id)}" data-locked="1" style="font-size:11px;padding:4px 8px">🔓 Kilidi Aç</button>`
-                    : `<button class="btn small danger" data-quick-user-lock="${this.esc(u.id)}" data-locked="0" style="font-size:11px;padding:4px 8px">🔒 Kilitle</button>`
+                    ? `<button class="btn small success" data-quick-user-lock="${this.esc(u.id)}" data-locked="1" style="font-size:11px;padding:4px 7px">🔓 Aç</button>`
+                    : `<button class="btn small danger" data-quick-user-lock="${this.esc(u.id)}" data-locked="0" style="font-size:11px;padding:4px 7px">🔒 Kilitle</button>`
                   }
                 </div>
               </div>
@@ -1962,7 +2024,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
       </div>
 
       <!-- SEÇENEK 2: Canlı Coğrafi Radar & Dünya / Türkiye 81 İl Harita Dağılımı Kartı -->
-      <div class="radar-card">
+      <div class="radar-card ${this.radarFullscreen ? 'fullscreen-radar' : ''}">
         <div class="radar-container">
           <div class="radar-screen">
             ${this.buildRadarMapSvg(cityEntries)}
@@ -1975,7 +2037,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
             <div class="radar-center"></div>
             ${blipsHtml}
           </div>
-          <div style="flex:1;min-width:280px">
+          <div style="flex:1;min-width:280px;width:100%">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px">
               <h2 style="margin:0;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <span>🌍 Canlı Dünya & Türkiye Coğrafi Radarı</span>
@@ -1986,20 +2048,24 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
                 <button class="btn small ${this.radarZoom === 'world' ? 'gold' : ''}" data-radar-zoom="world" style="font-size:11px;padding:4px 10px" title="Tüm Dünya Kıtaları (Amerika, Avrupa, Afrika, Asya, Okyanusya)">🌍 Tüm Dünya Kıtaları</button>
                 <button class="btn small ${this.radarScope === 'all' ? 'success' : ''}" data-radar-scope="all" style="font-size:11px;padding:4px 10px">🗺 Tüm Noktalar (${users.length})</button>
                 <button class="btn small ${this.radarScope === 'online' ? 'success' : ''}" data-radar-scope="online" style="font-size:11px;padding:4px 10px">🟢 Sadece Canlı (${onlineCnt})</button>
+                <button class="btn small ${this.radarFullscreen ? 'danger' : 'gold'}" id="btn-radar-fullscreen" style="font-size:11px;padding:4px 12px;font-weight:900" title="Radarı Tam Ekran Komuta Merkezi (TV Modu) olarak aç/kapat">
+                  ${this.radarFullscreen ? '✕ Tam Ekrandan Çık' : '⛶ Tam Ekran Radar'}
+                </button>
               </div>
             </div>
             <p class="hint" style="margin:0 0 10px 0;font-size:12px">
-              Panoramik radar üzerinde Türkiye ve dünya kıtaları gerçek enlem/boylam koordinatlarıyla çizilmiştir. 360° tam tur dönen lazer tarayıcı aktif bağlantıları tarar. Haritadaki il noktasına veya aşağıdaki şehir kutularına tıklayarak o ildeki tüm kullanıcıları (${cityEntries.map(([c, g]) => `${c}: ${g.users.length}`).join(', ') || '0'}) detaylı listeyebilirsiniz.
+              Panoramik radar üzerinde Türkiye ve dünya kıtaları gerçek enlem/boylam koordinatlarıyla çizilmiştir. 360° tam tur dönen lazer tarayıcı aktif bağlantıları tarar. Haritadaki il noktasına veya aşağıdaki şehir kutularına tıklayarak o ildeki tüm kullanıcıları (${cityEntries.map(([c, g]) => `${c}: ${g.users.length}`).join(', ') || '0'}) detaylı listeyebilir ve o ile özel anlık bildirim gönderebilirsiniz.
             </p>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               ${cityPillsHtml}
             </div>
           </div>
         </div>
+        ${this.radarFullscreen ? selCardHtml : ''}
       </div>
 
-      <!-- Tıklanan Şehrin Kullanıcı Kartı (Varsa) -->
-      ${selCardHtml}
+      <!-- Tıklanan Şehrin Kullanıcı Kartı (Normal Görünümde) -->
+      ${!this.radarFullscreen ? selCardHtml : ''}
 
       <!-- Manuel Kullanıcı Ekleme Paneli -->
       <div class="panel" style="border-color:rgba(245,158,11,.35)">
@@ -2237,6 +2303,58 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     if (exportCsvBtn) exportCsvBtn.onclick = () => this.exportUsersCsv();
     const printPdfBtn = c.querySelector('#btn-print-pdf');
     if (printPdfBtn) printPdfBtn.onclick = () => this.printUsersPdf();
+
+    // Radar Tam Ekran Komuta Merkezi (TV Modu) Butonu
+    const fsBtn = c.querySelector('#btn-radar-fullscreen');
+    if (fsBtn) {
+      fsBtn.onclick = () => {
+        this.radarFullscreen = !this.radarFullscreen;
+        this.render();
+      };
+    }
+
+    // Seçili İle / Bölgeye Toplu Anlık Ekran Bildirimi Gönderme
+    const citySendBtn = c.querySelector('#btn-city-broadcast-send');
+    const cityMsgInp = c.querySelector('#city-broadcast-msg');
+    if (citySendBtn && cityMsgInp) {
+      const sendCityMsg = async () => {
+        const msg = cityMsgInp.value.trim();
+        if (!msg) return this.toast('⚠️ Lütfen bu bölgedeki kullanıcılara gönderilecek mesajı yazın.', 'warn');
+        const targets = citySendBtn.dataset.cityTargets || '';
+        const cityName = citySendBtn.dataset.cityName || 'Bölge';
+        const r = await jadmin.invoke('admin:broadcast-popup', {
+          title: `📍 ${cityName.toUpperCase()} BÖLGESİ YÖNETİCİ BİLDİRİMİ`,
+          message: msg,
+          targetUser: targets
+        });
+        if (r && r.ok) {
+          this.state = r.state;
+          cityMsgInp.value = '';
+          this.toast(`⚡ "${cityName}" bölgesindeki tüm kullanıcılara anlık ekran bildirimi gönderildi!`);
+        }
+      };
+      citySendBtn.onclick = sendCityMsg;
+      cityMsgInp.onkeydown = (e) => { if (e.key === 'Enter') sendCityMsg(); };
+    }
+
+    // Seçili İldeki Tek Bir Kullanıcıya Özel Anlık Ekran Mesajı Gönderme
+    c.querySelectorAll('[data-direct-popup-user]').forEach(btn => {
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        const uname = btn.dataset.directPopupUser;
+        const msg = await this.customPrompt(`"${uname}" kullanıcısının ekranına anında açılacak mesajı yazın:`, '');
+        if (!msg) return;
+        const r = await jadmin.invoke('admin:broadcast-popup', {
+          title: `👑 ${uname.toUpperCase()} İÇİN ÖZEL YÖNETİCİ MESAJI`,
+          message: msg,
+          targetUser: uname
+        });
+        if (r && r.ok) {
+          this.state = r.state;
+          this.toast(`📨 "${uname}" kullanıcısının ekranına anlık mesaj gönderildi!`);
+        }
+      };
+    });
 
     // Radar harita ölçek/zoom modu (Türkiye & Avrasya / Tüm Dünya Kıtaları)
     c.querySelectorAll('[data-radar-zoom]').forEach(btn => {

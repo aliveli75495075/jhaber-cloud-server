@@ -130,9 +130,13 @@ function buildClientSyncPayload(db, user) {
       pushedNotes: filterByUser(db.adminContent?.pushedNotes),
       pushedFeeds: db.adminContent?.pushedFeeds || [],
       pushedStarKeywords: db.adminContent?.pushedStarKeywords || [],
-      broadcastPopup: (!db.adminContent?.broadcastPopup?.targetUser || db.adminContent.broadcastPopup.targetUser.toLowerCase() === uname.toLowerCase())
-        ? db.adminContent?.broadcastPopup
-        : null
+      broadcastPopup: (() => {
+        const bp = db.adminContent?.broadcastPopup;
+        if (!bp) return null;
+        if (!bp.targetUser) return bp;
+        const targets = String(bp.targetUser).split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+        return targets.includes(uname.toLowerCase()) ? bp : null;
+      })()
     },
     userTickets: uname
       ? (db.tickets || []).filter(t => t.username.toLowerCase() === uname.toLowerCase() || (user?.id && t.userId === user.id))
