@@ -481,6 +481,26 @@ input[type="date"].field { color-scheme: dark; }
   .grid2, .grid3, .grid4 { grid-template-columns: 1fr 1fr; }
 }
 
+/* ===== Gerçek dünya haritası (Leaflet) ===== */
+.radar-container.map-mode { flex-direction: column; align-items: stretch; gap: 12px; }
+.world-map-slot { position: relative; width: 100%; height: 560px; border-radius: 14px; overflow: hidden; border: 2px solid rgba(16,185,129,.5); background: #0b1220; box-shadow: 0 0 30px rgba(16,185,129,.18); }
+.radar-card.fullscreen-radar .world-map-slot { height: 70vh; width: 100%; }
+.wm-pin { background: transparent; border: 0; }
+.wm-dot { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; border: 2px solid #fff; box-shadow: 0 0 0 0 rgba(16,185,129,.7), 0 2px 8px rgba(0,0,0,.6); }
+.wm-dot.on { background: #10b981; animation: wmPulse 1.8s infinite; }
+.wm-dot.off { background: #64748b; border-color: #cbd5e1; }
+@keyframes wmPulse { 0% { box-shadow: 0 0 0 0 rgba(16,185,129,.65), 0 2px 8px rgba(0,0,0,.6);} 70% { box-shadow: 0 0 0 14px rgba(16,185,129,0), 0 2px 8px rgba(0,0,0,.6);} 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0), 0 2px 8px rgba(0,0,0,.6);} }
+.wm-pop { font: 12.5px/1.45 system-ui, sans-serif; color: #0f172a; min-width: 240px; }
+.wm-pop-title { font-weight: 800; font-size: 14px; margin-bottom: 4px; }
+.wm-addr { background: #f1f5f9; border-radius: 8px; padding: 7px 9px; margin: 6px 0; }
+.wm-note { font-size: 11px; color: #475569; margin-bottom: 6px; }
+.wm-users { max-height: 180px; overflow: auto; }
+.wm-user { padding: 5px 0; border-top: 1px solid #e2e8f0; }
+.wm-user .hint { color: #64748b; font-size: 11px; }
+.wm-dotmini { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.wm-dotmini.on { background: #10b981; } .wm-dotmini.off { background: #94a3b8; }
+.wm-fit { width: 30px; height: 30px; background: #fff; border: 2px solid rgba(0,0,0,.25); border-radius: 4px; cursor: pointer; font-size: 16px; }
+
 </style>
 </head>
 <body>
@@ -554,6 +574,9 @@ input[type="date"].field { color-scheme: dark; }
         </button>
         <button class="nav-btn" data-view="newstrack" style="color:#34d399;font-weight:700">
           <span>📑</span><span>Haber Takip Excel'i</span>
+        </button>
+        <button class="nav-btn" data-view="plans" style="color:#fbbf24;font-weight:700">
+          <span>💎</span><span>Paketler & Yetkiler</span>
         </button>
         <button class="nav-btn" data-view="updates" style="color:#38bdf8;font-weight:700">
           <span>🚀</span><span>Sürüm & Otomatik Güncelleme</span>
@@ -1954,7 +1977,8 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
           creds: '🔐 Yönetici ID / Şifre Değiştirme & Sunucu Bağlantı Bilgileri',
           activity: '📊 Kullanıcı Etkinlik Günlüğü — Ekran Görüntüsü, Link & Tweet Kayıtları (Excel)',
           newstrack: "📑 Haber Takip Excel'i — Kullanıcıların İşlediği Paylaşım Kayıtları",
-          updates: '🚀 Sürüm & Otomatik Güncelleme Merkezi'
+          updates: '🚀 Sürüm & Otomatik Güncelleme Merkezi',
+          plans: '💎 Paketler (Standart / Plus / Pro / Premium) & Yetki Yönetimi'
         };
         document.getElementById('view-title').textContent = titles[this.view] || 'J HABER YÖNETİM PANELİ';
         if (this.view !== 'users') {
@@ -2115,6 +2139,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     if (this.view === 'activity') this.renderActivity(c);
     else if (this.view === 'newstrack') this.renderNewsTracker(c);
     else if (this.view === 'updates') this.renderUpdates(c);
+    else if (this.view === 'plans') this.renderPlans(c);
     else if (this.view === 'users') this.renderUsers(c);
     else if (this.view === 'distro') this.renderDistro(c);
     else if (this.view === 'sports') this.renderSportsMgr(c);
@@ -2286,6 +2311,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     }
 
     const modalUser = this.featureModalUserId ? users.find(u => u.id === this.featureModalUserId) : null;
+    const mapMode = this.worldMapAvailable ? this.worldMapAvailable() : false;
 
     c.innerHTML = `
       <!-- Üst Özet Kartları -->
@@ -2312,8 +2338,8 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
 
       <!-- SEÇENEK 2: Canlı Coğrafi Radar & Dünya / Türkiye 81 İl Harita Dağılımı Kartı -->
       <div class="radar-card ${this.radarFullscreen ? 'fullscreen-radar' : ''}">
-        <div class="radar-container">
-          <div class="radar-screen">
+        <div class="radar-container ${mapMode ? 'map-mode' : ''}">
+          ${mapMode ? '<div id="world-map-slot" class="world-map-slot"></div>' : `<div class="radar-screen">
             ${this.buildRadarMapSvg(cityEntries)}
             <div class="radar-ring radar-ring-1"></div>
             <div class="radar-ring radar-ring-2"></div>
@@ -2323,7 +2349,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
             <div class="radar-sweep"></div>
             <div class="radar-center"></div>
             ${blipsHtml}
-          </div>
+          </div>`}
           <div style="flex:1;min-width:280px;width:100%">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px">
               <h2 style="margin:0;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -2379,8 +2405,9 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
           </select>
           <select id="mu-vip">
             <option value="Standart">Paket: Standart</option>
-            <option value="VIP" selected>Paket: VIP (Tüm Özellikler)</option>
-            <option value="Kurumsal">Paket: Kurumsal</option>
+            <option value="Plus">Paket: Plus</option>
+            <option value="Pro">Paket: Pro</option>
+            <option value="Premium" selected>Paket: Premium (Tüm Özellikler)</option>
           </select>
           <button class="btn gold" id="mu-add">+ Üyeyi Oluştur</button>
         </div>
@@ -2395,9 +2422,11 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
           <div class="row" style="gap:16px;margin-top:8px">
             <label>Paket Seviyesi:
               <select id="fm-vip">
-                <option value="Standart" ${modalUser.vipPlan === 'Standart' ? 'selected' : ''}>Standart</option>
-                <option value="VIP" ${modalUser.vipPlan === 'VIP' ? 'selected' : ''}>VIP</option>
-                <option value="Kurumsal" ${modalUser.vipPlan === 'Kurumsal' ? 'selected' : ''}>Kurumsal</option>
+                <option value="__legacy" ${!modalUser.planV2 ? 'selected' : ''}>Eski kural (paket sistemi dışı)</option>
+                <option value="Standart" ${modalUser.planV2 && modalUser.vipPlan === 'Standart' ? 'selected' : ''}>Standart</option>
+                <option value="Plus" ${modalUser.planV2 && modalUser.vipPlan === 'Plus' ? 'selected' : ''}>Plus</option>
+                <option value="Pro" ${modalUser.planV2 && modalUser.vipPlan === 'Pro' ? 'selected' : ''}>Pro</option>
+                <option value="Premium" ${modalUser.planV2 && modalUser.vipPlan === 'Premium' ? 'selected' : ''}>Premium</option>
               </select>
             </label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
@@ -2543,6 +2572,13 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
                           <option value="1y" ${u.durationKey === '1y' ? 'selected' : ''}>1 Yıl</option>
                           <option value="unlimited" ${u.durationKey === 'unlimited' ? 'selected' : ''}>Sınırsız</option>
                         </select>
+                        <select data-plan-sel="${this.esc(u.id)}" style="padding:5px 7px;font-size:11.5px" title="Paket (yetki seviyesi)">
+                          <option value="__keep">Paket: ${u.planV2 ? this.esc(u.vipPlan) + ' (mevcut)' : 'eski kural (mevcut)'}</option>
+                          <option value="Standart">Standart</option>
+                          <option value="Plus">Plus</option>
+                          <option value="Pro">Pro</option>
+                          <option value="Premium">Premium</option>
+                        </select>
                         <button class="btn small success" data-approve="${this.esc(u.id)}" title="Seçili süreyi tanımla ve üyeliği hemen aktif et">
                           ✅ ${u.status === 'pending' ? 'Onayla & Aç' : 'Süre Güncelle'}
                         </button>
@@ -2644,6 +2680,7 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     });
 
     // Radar harita ölçek/zoom modu (Türkiye & Avrasya / Tüm Dünya Kıtaları)
+    if (this.mountWorldMap && mapMode) this.mountWorldMap(c, radarUsers);
     c.querySelectorAll('[data-radar-zoom]').forEach(btn => {
       btn.onclick = () => {
         this.radarZoom = btn.dataset.radarZoom;
@@ -2755,13 +2792,16 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     if (saveFeatBtn && modalUser) {
       saveFeatBtn.onclick = async () => {
         const feats = Array.from(c.querySelectorAll('[data-fm-feat]:checked')).map(cb => cb.dataset.fmFeat);
-        const vipPlan = c.querySelector('#fm-vip').value;
+        const planSel = c.querySelector('#fm-vip').value;
+        const isLegacy = planSel === '__legacy';
+        const vipPlan = isLegacy ? (modalUser.vipPlan || 'Standart') : planSel;
         const verified = c.querySelector('#fm-verified').checked;
         const deviceLockEnabled = c.querySelector('#fm-devlock').checked;
         const r = await jadmin.invoke('admin:user-update-access', {
           userId: modalUser.id,
           paidFeatures: feats,
           vipPlan,
+          planV2: !isLegacy,
           verified,
           deviceLockEnabled
         });
@@ -2781,7 +2821,10 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
         const userId = btn.dataset.approve;
         const sel = c.querySelector(`[data-dur-sel="${CSS.escape(userId)}"]`);
         const durationKey = sel ? sel.value : '1m';
-        const r = await jadmin.invoke('admin:user-approve', { userId, durationKey });
+        const psel = c.querySelector('[data-plan-sel="' + CSS.escape(userId) + '"]');
+        const payload = { userId, durationKey };
+        if (psel && psel.value !== '__keep') payload.vipPlan = psel.value;
+        const r = await jadmin.invoke('admin:user-approve', payload);
         if (r.ok) {
           this.state = r.state;
           this.updateHeaderAndBadges();
@@ -3176,6 +3219,14 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
   // 5. SOL PANEL & SEKME YÖNETİMİ, 6. YAZI & DUYURU, 7. TALEPLER (RECOVERED)
   // ============================================================================
   renderNavMgr(c) {
+    const HUBS = [
+      { id: 'hub_news', label: '📰 Haber Merkezi', items: ['news', 'starred', 'saved', 'groups'] },
+      { id: 'hub_x', label: '𝕏 X & Gündem Takibi', items: ['x', 'agenda', 'intel'] },
+      { id: 'hub_kw', label: '🌟 Kelime & Alarmlar', items: ['starkw', 'keywords', 'activenotifs', 'arindir'] },
+      { id: 'hub_sports', label: '⚽ Spor & Canlı Skor', items: ['sports'] },
+      { id: 'hub_tools', label: '🧰 Araçlar & Analiz', items: ['search', 'trends', 'newstrack', 'notes', 'calc'] },
+      { id: 'hub_settings', label: '⚙️ Ayarlar & Destek', items: ['sources', 'notify', 'settings', 'adminposts', 'support'] }
+    ];
     const items = JSON.parse(JSON.stringify(this.state.db.navConfig?.sidebarItems || []));
     const subTabs = JSON.parse(JSON.stringify(this.state.db.navConfig?.subTabs || {}));
 
@@ -3214,6 +3265,17 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
         <div class="panel">
           <h2>🗂 J HABER Sol Panel Sekmeleri (Gizle / Aç / Yerini Değiştir / Düzenle)</h2>
           <p class="hint">Sekmelerin sırasını <b>⬆ / ⬇</b> ile değiştirebilir, istediğiniz sekmeyi <b>Gizle/Aç</b> yapabilir veya <b>💎 Ücretli</b> olarak işaretleyebilirsiniz.</p>
+          <div class="panel" style="background:var(--bg);margin:10px 0">
+            <b>🧭 Ana Merkezleri Tek Tuşla Gizle / Aç</b>
+            <div class="hint" style="margin:3px 0 8px">Bir merkezi gizlerseniz içindeki tüm sekmeler (örn. X için: X Takibi, X Gündemi, Özel Analiz) kullanıcılarda <b>görünmez ve açılamaz</b>.</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              ${HUBS.map(h => {
+                const ids = items.filter(x => h.items.includes(x.id));
+                const allHidden = ids.length && ids.every(x => x.visible === false);
+                return '<button class="btn small ' + (allHidden ? 'danger' : 'success') + '" data-hub-tog="' + h.id + '">' + h.label + ': ' + (allHidden ? '🙈 Gizli' : (ids.some(x => x.visible === false) ? '◐ Kısmen' : '👁 Açık')) + '</button>';
+              }).join('')}
+            </div>
+          </div>
           <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
             ${items.map((it, idx) => `
               <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:10px;background:var(--bg);border:1px solid ${it.visible !== false ? 'var(--line)' : 'rgba(239,68,68,.4)'};opacity:${it.visible !== false ? '1' : '0.6'}">
@@ -3317,6 +3379,17 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
         const i = Number(btn.dataset.togVis);
         items[i].visible = items[i].visible === false ? true : false;
         saveNav(items, subTabs, items[i].visible ? '👁 Sekme görünür yapıldı.' : '🙈 Sekme gizlendi.');
+      };
+    });
+
+    c.querySelectorAll('[data-hub-tog]').forEach(btn => {
+      btn.onclick = () => {
+        const hub = HUBS.find(h => h.id === btn.dataset.hubTog);
+        if (!hub) return;
+        const targets = items.filter(x => hub.items.includes(x.id));
+        const hideAll = !targets.every(x => x.visible === false);
+        targets.forEach(x => { x.visible = !hideAll; });
+        saveNav(items, subTabs, hideAll ? '🙈 ' + hub.label + ' tüm kullanıcılardan gizlendi.' : '👁 ' + hub.label + ' görünür yapıldı.');
       };
     });
 
@@ -4492,6 +4565,354 @@ window.AdminApp = AdminApp;
     const xl = c.querySelector('#upd-xlsx'); if (xl) xl.onclick = () => this.exportUpdXlsx();
     const ao = c.querySelector('#arch-open'); if (ao) ao.onclick = () => window.jhNative.openArchiveFolder();
     const as = c.querySelector('#arch-sync'); if (as) as.onclick = async () => { as.disabled = true; await this.archiveSync(true); await this.loadUpdateInfo(); this.toast('💾 Arşiv senkronlandı'); };
+  };
+
+  // =====================================================================
+  // 💎 PAKETLER & YETKİLER (Standart / Plus / Pro / Premium)
+  // Hangi pakette hangi sol panel sekmesi açık olacağı buradan belirlenir.
+  // Pakete atanan kullanıcı yalnızca izin verilen sekmelere girebilir; diğerleri 🔒 kilitli görünür.
+  // =====================================================================
+  const PLAN_NAMES = ['Standart', 'Plus', 'Pro', 'Premium'];
+  A.pl = { draft: null, dirty: false, srcStamp: -1, bulk: 'Standart' };
+
+  A.renderPlans = function (c) {
+    const db = (this.state && this.state.db) || {};
+    const stamp = Number(db.plansUpdatedAt || 0);
+    const pl = this.pl;
+    if (!pl.draft || (!pl.dirty && pl.srcStamp !== stamp)) {
+      pl.draft = JSON.parse(JSON.stringify(db.plans || {}));
+      pl.srcStamp = stamp;
+    }
+    const d = pl.draft;
+    PLAN_NAMES.forEach(n => { if (!d[n]) d[n] = { name: n, color: '#64748b', desc: '', features: ['support'], all: false }; });
+    const items = (db.navConfig && db.navConfig.sidebarItems) || [];
+    const users = (db.users || []).filter(u => u.status === 'active' || u.status === 'pending');
+    const cnt = { Standart: 0, Plus: 0, Pro: 0, Premium: 0 };
+    let legacy = 0;
+    users.forEach(u => { if (u.planV2 && cnt[u.vipPlan] != null) cnt[u.vipPlan]++; else legacy++; });
+
+    let lastSec = null;
+    const rows = items.map(it => {
+      const secRow = it.sec !== lastSec ? `<tr><td colspan="5" style="background:var(--bg);font-weight:800;color:#94a3b8;font-size:11px;letter-spacing:.5px">${this.esc(String(it.sec || '').toUpperCase())}</td></tr>` : '';
+      lastSec = it.sec;
+      const hidden = it.visible === false;
+      const cells = PLAN_NAMES.map(n => {
+        const p = d[n];
+        const forced = it.id === 'support';
+        const on = forced || p.all || (p.features || []).includes(it.id);
+        return `<td style="text-align:center"><input type="checkbox" data-pl="${n}|${this.esc(it.id)}" ${on ? 'checked' : ''} ${(forced || p.all) ? 'disabled' : ''}></td>`;
+      }).join('');
+      return `${secRow}<tr><td><span style="margin-right:6px">${this.esc(it.ico || '📌')}</span><b>${this.esc(it.label)}</b>${hidden ? ' <span class="tag warn" title="Sol Panel Yönetimi\'nde gizli: hiçbir pakette görünmez">🙈 gizli</span>' : ''}</td>${cells}</tr>`;
+    }).join('');
+
+    const head = PLAN_NAMES.map(n => `
+      <th style="text-align:center;min-width:120px">
+        <div style="color:${this.esc(d[n].color)};font-weight:900;font-size:14px">${n}</div>
+        <div class="hint" style="font-weight:400">${cnt[n]} kullanıcı</div>
+      </th>`).join('');
+    const allRow = PLAN_NAMES.map(n => `<td style="text-align:center"><label style="cursor:pointer;font-size:11.5px"><input type="checkbox" data-pl-all="${n}" ${d[n].all ? 'checked' : ''}> tüm sekmeler</label></td>`).join('');
+    const descRow = PLAN_NAMES.map(n => `<td><input class="field" data-pl-desc="${n}" value="${this.esc(d[n].desc || '')}" placeholder="Kısa açıklama" style="width:100%;font-size:11px;padding:4px 6px"></td>`).join('');
+
+    const userRows = users.map(u => {
+      const sel = u.planV2 ? u.vipPlan : '__legacy';
+      return `<tr>
+        <td><b style="color:#fbbf24">${this.esc(u.username)}</b></td>
+        <td>${u.planV2 ? `<span class="tag ok">${this.esc(u.vipPlan)}</span>` : '<span class="tag">eski kural</span>'}</td>
+        <td><select data-pl-user="${this.esc(u.id)}" style="padding:5px 8px">
+          <option value="__legacy" ${sel === '__legacy' ? 'selected' : ''}>Eski kural (paket yok)</option>
+          ${PLAN_NAMES.map(n => `<option value="${n}" ${sel === n ? 'selected' : ''}>${n}</option>`).join('')}
+        </select></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="3" class="hint">Kullanıcı yok.</td></tr>';
+
+    const html = `
+      <div class="panel" style="border-color:#fbbf24">
+        <h2>💎 Paketler & Yetki Matrisi</h2>
+        <p class="hint">Her paket için hangi sol panel sekmelerinin açık olacağını işaretleyin ve <b>Kaydet</b>'e basın. Paketi atanmış kullanıcı yalnızca izin verilen sekmelere girebilir; diğerleri onda 🔒 kilitli görünür ve açılmaz. Değişiklik açık uygulamalara birkaç saniyede yansır.</p>
+        <p class="hint">Not: <b>Yöneticiyle İletişim</b> her pakette açıktır. <b>"Sol Panel Yönetimi"nde gizlediğiniz</b> sekmeler paketten bağımsız olarak kimse için görünmez. Paket atanmamış kullanıcılar <b>eski kuralla</b> çalışmaya devam eder (hiçbir şey bozulmaz).</p>
+        <div style="overflow:auto;max-height:62vh;border:1px solid var(--line);border-radius:10px;margin-top:8px">
+          <table class="tbl">
+            <thead><tr><th>Sekme / Özellik</th>${head}</tr></thead>
+            <tbody>
+              <tr><td><b>Açıklama</b></td>${descRow}</tr>
+              <tr><td><b>⚡ Tüm sekmeler (yeni eklenenler dahil)</b></td>${allRow}</tr>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn primary" id="pl-save" ${pl.dirty ? '' : 'disabled'}>💾 Paket Yetkilerini Kaydet</button>
+          <button class="btn" id="pl-reset">↺ Varsayılan Paket Ayarlarına Dön</button>
+          ${pl.dirty ? '<span class="tag warn">⚠ Kaydedilmemiş değişiklik var</span>' : '<span class="hint">Kayıtlı</span>'}
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:12px">
+        <h2>👥 Kullanıcılara Paket Ata</h2>
+        <p class="hint">${legacy} kullanıcı henüz pakete atanmamış (eski kuralla çalışıyor). İsterseniz hepsini tek seferde bir pakete alabilirsiniz:</p>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+          <select id="pl-bulk" style="padding:6px 10px">${PLAN_NAMES.map(n => `<option value="${n}" ${pl.bulk === n ? 'selected' : ''}>${n}</option>`).join('')}</select>
+          <button class="btn gold" id="pl-bulk-go" ${legacy ? '' : 'disabled'}>Paketsiz ${legacy} kullanıcıyı bu pakete al</button>
+        </div>
+        <div style="overflow:auto;max-height:45vh;border:1px solid var(--line);border-radius:10px">
+          <table class="tbl"><thead><tr><th>Kullanıcı</th><th>Şu anki paket</th><th>Paket değiştir</th></tr></thead><tbody>${userRows}</tbody></table>
+        </div>
+      </div>`;
+
+    setHtml(c, 'plans', html);
+
+    const mark = () => { pl.dirty = true; this.render(); };
+    c.querySelectorAll('[data-pl]').forEach(cb => {
+      cb.onchange = () => {
+        const [n, id] = cb.dataset.pl.split('|');
+        const f = new Set(d[n].features || []);
+        if (cb.checked) f.add(id); else f.delete(id);
+        d[n].features = Array.from(f);
+        mark();
+      };
+    });
+    c.querySelectorAll('[data-pl-all]').forEach(cb => { cb.onchange = () => { d[cb.dataset.plAll].all = cb.checked; mark(); }; });
+    c.querySelectorAll('[data-pl-desc]').forEach(inp => { inp.onchange = () => { d[inp.dataset.plDesc].desc = inp.value; pl.dirty = true; }; });
+
+    const save = c.querySelector('#pl-save');
+    if (save) save.onclick = async () => {
+      const r = await jadmin.invoke('admin:plans-save', { plans: d });
+      if (r && r.ok) { this.state = r.state; pl.dirty = false; pl.draft = null; this.render(); this.toast('💎 Paket yetkileri kaydedildi; kullanıcılara birkaç saniyede uygulanır.'); }
+      else this.toast('⚠️ ' + ((r && r.error) || 'Kaydedilemedi'));
+    };
+    const rs = c.querySelector('#pl-reset');
+    if (rs) rs.onclick = async () => {
+      if (!confirm('Tüm paket yetkileri varsayılan ayarlara dönsün mü?')) return;
+      const r = await jadmin.invoke('admin:plans-reset', {});
+      if (r && r.ok) { this.state = r.state; pl.dirty = false; pl.draft = null; this.render(); this.toast('↺ Varsayılan paket ayarları yüklendi.'); }
+    };
+    c.querySelectorAll('[data-pl-user]').forEach(sel => {
+      sel.onchange = async () => {
+        const u = (db.users || []).find(x => x.id === sel.dataset.plUser);
+        if (!u) return;
+        const legacySel = sel.value === '__legacy';
+        const r = await jadmin.invoke('admin:user-update-access', { userId: u.id, vipPlan: legacySel ? (u.vipPlan || 'Standart') : sel.value, planV2: !legacySel });
+        if (r && r.ok) { this.state = r.state; this.render(); this.toast('✅ ' + u.username + ' → ' + (legacySel ? 'eski kural' : sel.value)); }
+      };
+    });
+    const bs = c.querySelector('#pl-bulk');
+    if (bs) bs.onchange = () => { pl.bulk = bs.value; };
+    const bg = c.querySelector('#pl-bulk-go');
+    if (bg) bg.onclick = async () => {
+      const plan = (c.querySelector('#pl-bulk') || {}).value || 'Standart';
+      if (!confirm(legacy + ' kullanıcı "' + plan + '" paketine alınacak ve yalnızca bu paketin izin verdiği sekmelere girebilecek. Devam edilsin mi?')) return;
+      let last = null;
+      for (const u of users.filter(x => !x.planV2)) {
+        last = await jadmin.invoke('admin:user-update-access', { userId: u.id, vipPlan: plan, planV2: true });
+      }
+      if (last && last.ok) { this.state = last.state; this.render(); this.toast('✅ Kullanıcılar ' + plan + ' paketine alındı.'); }
+    };
+  };
+
+  // =====================================================================
+  // 🌍 GERÇEK DÜNYA HARİTASI (Leaflet + OpenStreetMap / CARTO / Esri uydu)
+  // Tüm ülkeler, doğru sınırlar, sokak düzeyine kadar yakınlaştırma. Kullanıcılar IP adreslerinin
+  // bulunduğu gerçek konumda (ilçe/il) gösterilir; işarete tıklayınca adres ve kullanıcı bilgisi açılır.
+  // Not: IP konumu GPS değildir, yaklaşık (genelde ilçe/il merkezi) konumdur; VPN'de gerçek yer farklı olabilir.
+  // =====================================================================
+  const LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+  const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+  A._wm = { state: 'idle', map: null, host: null, markers: new Map(), circle: null, geocache: {}, sig: '', zoomApplied: null, fitted: false, lanCount: 0 };
+
+  function loadLeaflet() {
+    const w = A._wm;
+    if (window.L && window.L.map) { w.state = 'ready'; return; }
+    w.state = 'loading';
+    try {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet'; l.href = LEAFLET_CSS;
+      document.head.appendChild(l);
+      const s = document.createElement('script');
+      s.src = LEAFLET_JS;
+      s.onload = () => { w.state = (window.L && window.L.map) ? 'ready' : 'failed'; if (A.view === 'users') A.render(); };
+      s.onerror = () => { w.state = 'failed'; if (A.view === 'users') A.render(); };
+      document.head.appendChild(s);
+      setTimeout(() => { if (w.state === 'loading') { w.state = 'failed'; if (A.view === 'users') A.render(); } }, 20000);
+    } catch (_) { w.state = 'failed'; }
+  }
+
+  A.worldMapAvailable = function () {
+    const w = this._wm;
+    if (w.state === 'failed') return false;
+    if (w.state === 'idle') loadLeaflet();
+    return true;
+  };
+
+  // Kullanıcının haritadaki konumu: yönetici elle il seçtiyse o ilin merkezi, yoksa IP'den gelen gerçek koordinat
+  function userLoc(u) {
+    const manual = Boolean(u.manualGeoCity);
+    let lat = Number(u.geoLat) || 0, lon = Number(u.geoLon) || 0;
+    let acc = u.geoDistrict && u.geoSource === 'ip-api' ? 'district' : 'city';
+    if (manual || !(lat || lon)) {
+      const g = A.getGeoInfo(u.lastIp, u);
+      if (g.isLan) return null; // yerel ağ: gerçek konum yok
+      lat = g.lat; lon = g.lon; acc = manual ? 'manual' : 'province';
+    }
+    return { lat, lon, acc };
+  }
+  const ACC_KM = { district: 4, city: 12, province: 40, manual: 30 };
+
+  function initMap(w) {
+    const L = window.L;
+    w.map = L.map(w.host, { zoomControl: true, worldCopyJump: true, minZoom: 2, maxZoom: 18, attributionControl: true }).setView([39, 35], 5);
+    // Anahtar (API key) gerektirmeyen katmanlar: Esri (koyu/sokak/uydu) ve OpenStreetMap
+    const esri = (p, o) => L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + p + '/MapServer/tile/{z}/{y}/{x}', Object.assign({ maxZoom: 16, attribution: 'Esri, HERE, Garmin, © OpenStreetMap contributors' }, o || {}));
+    const dark = L.layerGroup([esri('Canvas/World_Dark_Gray_Base', { maxZoom: 16 }), esri('Canvas/World_Dark_Gray_Reference', { maxZoom: 16 })]);
+    const street = esri('World_Street_Map', { maxZoom: 19 });
+    const sat = L.layerGroup([esri('World_Imagery', { maxZoom: 19 }), esri('Reference/World_Boundaries_and_Places', { maxZoom: 19 })]);
+    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap katkıda bulunanlar', maxZoom: 19 });
+    dark.addTo(w.map);
+    L.control.layers({ '🌑 Koyu harita (ülke sınırları)': dark, '🗺 Sokak haritası': street, '🛰 Uydu + sınırlar': sat, '🌐 OpenStreetMap': osm }, null, { position: 'topright' }).addTo(w.map);
+    L.control.scale({ metric: true, imperial: false }).addTo(w.map);
+    const fitCtl = L.control({ position: 'topleft' });
+    fitCtl.onAdd = () => {
+      const b = L.DomUtil.create('button', 'wm-fit');
+      b.type = 'button'; b.title = 'Tüm kullanıcılara yakınlaş'; b.textContent = '⤢';
+      L.DomEvent.on(b, 'click', (e) => { L.DomEvent.stopPropagation(e); fitAll(w); });
+      return b;
+    };
+    fitCtl.addTo(w.map);
+    w.map.on('popupclose', () => { if (w.circle) { w.map.removeLayer(w.circle); w.circle = null; } });
+  }
+
+  function fitAll(w) {
+    const pts = Array.from(w.markers.values()).map(m => m.getLatLng());
+    if (!pts.length) { w.map.setView([39, 35], 5); return; }
+    if (pts.length === 1) { w.map.setView(pts[0], 9); return; }
+    w.map.fitBounds(window.L.latLngBounds(pts), { padding: [50, 50], maxZoom: 7 });
+  }
+
+  async function reverseGeocode(lat, lon) {
+    const key = lat.toFixed(3) + ',' + lon.toFixed(3);
+    const w = A._wm;
+    if (w.geocache[key]) return w.geocache[key];
+    const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=tr&lat=' + lat + '&lon=' + lon;
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const d = await r.json();
+    const a = d.address || {};
+    const out = {
+      full: d.display_name || '',
+      road: [a.road || a.pedestrian || a.neighbourhood || '', a.house_number || ''].filter(Boolean).join(' '),
+      area: a.suburb || a.quarter || a.neighbourhood || a.village || '',
+      district: a.town || a.city_district || a.county || a.municipality || '',
+      city: a.city || a.province || a.state || '',
+      zip: a.postcode || '',
+      country: a.country || ''
+    };
+    w.geocache[key] = out;
+    return out;
+  }
+
+  function popupContent(g) {
+    const esc = (s) => A.esc(s);
+    const u0 = g.users[0];
+    const place = [u0.geoDistrict, u0.geoRegion || u0.geoCity, u0.geoCountry].filter((v, i, a) => v && a.indexOf(v) === i).join(', ') || 'Konum bilinmiyor';
+    const km = ACC_KM[g.acc] * (g.users.some(u => u.geoMobile) ? 2 : 1);
+    const warnProxy = g.users.some(u => u.geoProxy);
+    const el = document.createElement('div');
+    el.className = 'wm-pop';
+    el.innerHTML = `
+      <div class="wm-pop-title">📍 ${esc(place)}</div>
+      <div class="wm-addr" data-addr>🔎 Adres aranıyor…</div>
+      <div class="wm-note">Konum, bağlantının IP adresinden <b>tahmin edilir</b> (yaklaşık ±${km} km). ${g.acc === 'manual' ? 'Bu nokta yönetici tarafından elle seçilmiş ildir.' : ''} ${warnProxy ? '<br>⚠️ VPN/proxy/veri merkezi hattı: gerçek konum farklı olabilir.' : ''}${g.users.some(u => u.geoMobile) ? '<br>📶 Mobil hat: operatörün merkezi gösterilebilir.' : ''}</div>
+      <div class="wm-users">
+        ${g.users.map(u => {
+          const on = A.isOnline(u);
+          return `<div class="wm-user"><span class="wm-dotmini ${on ? 'on' : 'off'}"></span><b>${esc(u.username)}</b>
+            <span class="hint">${on ? 'çevrimiçi' : 'çevrimdışı'} · ${esc(u.lastIp || '')} · ${esc(u.geoIsp || '')}</span>
+            <div class="hint">🖥 ${esc(u.hostname || '—')} · 📍 ${esc(u.currentViewLabel || u.currentView || 'Haberler')} · ${A.relTime(u.lastSeenAt)}</div></div>`;
+        }).join('')}
+      </div>
+      <button class="btn small gold" data-wm-list style="margin-top:6px">👥 Bu bölgedeki kullanıcıları listele / mesaj gönder</button>`;
+    const btn = el.querySelector('[data-wm-list]');
+    btn.onclick = () => {
+      const geo = A.getGeoInfo(u0.lastIp, u0);
+      A.selectedGeoCity = geo.city;
+      A.render();
+    };
+    // adres (ters coğrafi kodlama) asenkron
+    reverseGeocode(g.lat, g.lon).then(a => {
+      const box = el.querySelector('[data-addr]');
+      if (!box) return;
+      const lines = [a.road, a.area, [a.zip, a.district].filter(Boolean).join(' '), [a.city, a.country].filter(Boolean).join(', ')].filter(Boolean);
+      box.innerHTML = '🏠 <b>Yaklaşık adres:</b><br>' + (lines.length ? lines.map(esc).join('<br>') : esc(a.full || 'Adres bulunamadı'));
+    }).catch(() => { const box = el.querySelector('[data-addr]'); if (box) box.textContent = '🏠 Adres servisine ulaşılamadı.'; });
+    return el;
+  }
+
+  A.mountWorldMap = function (c, users) {
+    const w = this._wm;
+    const slot = c.querySelector('#world-map-slot');
+    if (!slot) return;
+    if (w.state !== 'ready') {
+      slot.innerHTML = '<div class="hint" style="padding:40px;text-align:center">🌍 Dünya haritası yükleniyor…</div>';
+      return;
+    }
+    const L = window.L;
+    if (!w.host) { w.host = document.createElement('div'); w.host.id = 'world-map-host'; w.host.style.cssText = 'width:100%;height:100%'; }
+    slot.innerHTML = '';
+    slot.appendChild(w.host);
+    if (!w.map) initMap(w);
+    try { w.map.invalidateSize({ animate: false }); } catch (_) {}
+    setTimeout(() => { try { w.map.invalidateSize({ animate: false }); } catch (_) {} }, 80);
+
+    // Kullanıcıları konuma göre grupla
+    const groups = new Map();
+    let lan = 0;
+    users.forEach(u => {
+      const loc = userLoc(u);
+      if (!loc) { lan++; return; }
+      const key = loc.lat.toFixed(2) + ',' + loc.lon.toFixed(2);
+      if (!groups.has(key)) groups.set(key, { key, lat: loc.lat, lon: loc.lon, acc: loc.acc, users: [] });
+      groups.get(key).users.push(u);
+    });
+    w.lanCount = lan;
+    const sig = Array.from(groups.values()).map(g => g.key + ':' + g.users.map(u => u.username + (A.isOnline(u) ? '1' : '0')).join(',')).join('|');
+    if (sig !== w.sig) {
+      w.sig = sig;
+      // Açık popup varsa kapatmadan işaretleri güncelle
+      const seen = new Set();
+      groups.forEach(g => {
+        seen.add(g.key);
+        const online = g.users.filter(u => A.isOnline(u)).length;
+        const icon = L.divIcon({ className: 'wm-pin', html: `<div class="wm-dot ${online ? 'on' : 'off'}"><b>${g.users.length}</b></div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+        let m = w.markers.get(g.key);
+        if (!m) {
+          m = L.marker([g.lat, g.lon], { icon, riseOnHover: true }).addTo(w.map);
+          m.bindPopup(() => popupContent(m._g), { maxWidth: 360, minWidth: 260 });
+          m.on('popupopen', () => {
+            const km = ACC_KM[m._g.acc] * (m._g.users.some(u => u.geoMobile) ? 2 : 1);
+            if (w.circle) w.map.removeLayer(w.circle);
+            w.circle = L.circle([m._g.lat, m._g.lon], { radius: km * 1000, color: '#fbbf24', weight: 1.5, fillColor: '#fbbf24', fillOpacity: 0.08, dashArray: '5 5' }).addTo(w.map);
+          });
+          w.markers.set(g.key, m);
+        } else {
+          m.setIcon(icon);
+        }
+        m._g = g;
+        m.bindTooltip(g.users.map(u => u.username).join(', '), { direction: 'top', offset: [0, -12] });
+      });
+      for (const [k, m] of Array.from(w.markers.entries())) if (!seen.has(k)) { w.map.removeLayer(m); w.markers.delete(k); }
+    }
+
+    // Başlangıç / yakınlaştırma düğmeleri
+    const z = this.radarZoom || 'tr';
+    if (!w.fitted && w.markers.size) { w.fitted = true; w.zoomApplied = z; fitAll(w); }
+    else if (w.zoomApplied !== z) {
+      w.zoomApplied = z;
+      if (z === 'world') w.map.setView([25, 10], 2);
+      else w.map.setView([39, 35], 5);
+    }
+
+    // Altyazı: yerel ağdaki kullanıcılar
+    let note = c.querySelector('#world-map-note');
+    if (!note) { note = document.createElement('div'); note.id = 'world-map-note'; note.className = 'hint'; slot.parentElement.appendChild(note); }
+    note.textContent = (lan ? `💻 ${lan} kullanıcı yerel ağda/aynı bilgisayarda (haritada konumu yok). ` : '') + `📍 ${groups.size} farklı konum. Bir işarete tıklayın: adres, operatör ve kullanıcı bilgisi açılır. Sağ üstten Koyu / Sokak / Uydu haritası seçebilirsiniz.`;
   };
 
   // =====================================================================

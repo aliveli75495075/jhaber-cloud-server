@@ -89,6 +89,38 @@ const PAID_FEATURE_CATALOG = [
   { id: 'export', label: '⬇ Dışa Aktarma (CSV / HTML / Rapor)' }
 ];
 
+// ---- PAKETLER (Standart / Plus / Pro / Premium) ----
+// features: kullanıcının girebildiği sol panel sekme kimlikleri. all=true -> tüm (yeni eklenenler dahil) sekmeler.
+const PLAN_NAMES = ['Standart', 'Plus', 'Pro', 'Premium'];
+const PLAN_BASE = ['news', 'starred', 'saved', 'groups', 'keywords', 'arindir', 'notes', 'calc', 'newstrack', 'sources', 'notify', 'settings', 'adminposts', 'support'];
+function defaultPlans() {
+  const plus = [...PLAN_BASE, 'search', 'trends', 'agenda', 'sports'];
+  const pro = [...plus, 'x', 'starkw', 'activenotifs', 'export'];
+  return {
+    Standart: { name: 'Standart', color: '#64748b', desc: 'Temel haber takibi', features: [...PLAN_BASE], all: false },
+    Plus: { name: 'Plus', color: '#3b82f6', desc: 'Arama, grafik, spor ve gündem arşivi', features: plus, all: false },
+    Pro: { name: 'Pro', color: '#a855f7', desc: 'X takibi, yıldızlı kelimeler ve bildirim merkezi', features: pro, all: false },
+    Premium: { name: 'Premium', color: '#f59e0b', desc: 'Tüm özellikler (özel analiz merkezi dahil)', features: [...pro, 'intel'], all: true }
+  };
+}
+function sanitizePlans(input, current) {
+  const out = {};
+  const def = defaultPlans();
+  for (const n of PLAN_NAMES) {
+    const src = (input && input[n]) || (current && current[n]) || def[n];
+    const feats = Array.from(new Set((Array.isArray(src.features) ? src.features : []).map(x => String(x).slice(0, 60)).filter(Boolean))).slice(0, 300);
+    if (!feats.includes('support')) feats.push('support');
+    out[n] = {
+      name: n,
+      color: /^#[0-9a-fA-F]{6}$/.test(src.color || '') ? src.color : def[n].color,
+      desc: String(src.desc == null ? def[n].desc : src.desc).slice(0, 200),
+      features: feats,
+      all: Boolean(src.all)
+    };
+  }
+  return out;
+}
+
 function createDefaultDb() {
   return {
     adminAuth: {
@@ -182,6 +214,8 @@ function loadCentralDb() {
   if (!Array.isArray(db.users)) db.users = [];
   if (!Array.isArray(db.deletedUsernames)) db.deletedUsernames = [];
   if (!Array.isArray(db.tickets)) db.tickets = [];
+  if (!db.plans || typeof db.plans !== 'object') { db.plans = defaultPlans(); db.plansUpdatedAt = db.plansUpdatedAt || 0; }
+  else db.plans = sanitizePlans(db.plans, null);
   if (!Array.isArray(db.trafficLogs)) db.trafficLogs = [];
   db.branding = { ...DEFAULT_BRANDING, ...(db.branding || {}) };
   if (!db.sportsData) db.sportsData = def.sportsData;
@@ -261,8 +295,9 @@ function scheduleCloudBackup(db) {
         contact: u.contact, status: u.status, durationKey: u.durationKey,
         planLabel: u.planLabel, vipPlan: u.vipPlan, expiresAt: u.expiresAt,
         approvedAt: u.approvedAt, isLocked: u.isLocked, geoCity: u.geoCity,
-        manualGeoCity: u.manualGeoCity, paidFeatures: u.paidFeatures
+        manualGeoCity: u.manualGeoCity, paidFeatures: u.paidFeatures, planV2: u.planV2
       })),
+      plansUpdatedAt: db.plansUpdatedAt || 0,
       deletedUsernames: db.deletedUsernames || [],
       adminAuth: db.adminAuth,
       navConfig: db.navConfig?.updatedAt,
@@ -349,6 +384,10 @@ async function restoreDbFromCloudBackup() {
     if (remoteDb.adminAuth && remoteDb.adminAuth.password && remoteDb.adminAuth.password !== '123456') {
       localDb.adminAuth = remoteDb.adminAuth;
     }
+    if (remoteDb.plans && Number(remoteDb.plansUpdatedAt || 0) > Number(localDb.plansUpdatedAt || 0)) {
+      localDb.plans = sanitizePlans(remoteDb.plans, null);
+      localDb.plansUpdatedAt = remoteDb.plansUpdatedAt;
+    }
     if (Number(remoteDb.navConfig?.updatedAt || 0) > Number(localDb.navConfig?.updatedAt || 0)) {
       localDb.navConfig = remoteDb.navConfig;
     }
@@ -430,6 +469,9 @@ module.exports = {
   DEFAULT_BRANDING,
   DEFAULT_SUB_TABS,
   PAID_FEATURE_CATALOG,
+  PLAN_NAMES,
+  defaultPlans,
+  sanitizePlans,
   getCentralDir,
   getCentralFilePath,
   loadCentralDb,

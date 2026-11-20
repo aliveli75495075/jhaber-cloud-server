@@ -1,6 +1,6 @@
 {
-  "version": "4.3.0",
-  "buildTime": 1795188440648,
-  "asarSize": 2918443,
-  "changelog": "Kalıcı arşiv: destek mesajları ve haber takip kayıtları silinmez; sürüm/güncel durum paneli"
+  "version": "4.4.0",
+  "buildTime": 1795193455440,
+  "asarSize": 2907696,
+  "changelog": "Paketler (Standart/Plus/Pro/Premium), sol panel gizleme düzeltmesi, dünya haritası radarı, tam sezon spor fikstürü"
 }

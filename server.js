@@ -16,61 +16,80 @@ const PORT = Number(process.env.PORT) || 47850;
 let adminSessionTokens = new Set();
 const geoIpMemoryCache = {};
 
+// IP adresinden konum çözümleme (ilçe/il/ülke + koordinat). Gerçek GPS DEĞİLDİR: IP tabanlı tahmindir.
+// Önce ip-api.com (ilçe, posta kodu, mobil/VPN bayrakları verir), olmazsa ipwho.is kullanılır.
+async function lookupGeoIp(ip) {
+  const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+  try {
+    const r = await withTimeout(fetch('http://ip-api.com/json/' + encodeURIComponent(ip) + '?fields=status,country,countryCode,region,regionName,city,district,zip,lat,lon,isp,org,mobile,proxy,hosting&lang=tr'), 6000);
+    const d = await r.json();
+    if (d && d.status === 'success' && (d.lat || d.lon)) {
+      return {
+        source: 'ip-api', country: d.country || '', countryCode: d.countryCode || '',
+        region: d.regionName || '', city: d.city || '', district: d.district || '', zip: d.zip || '',
+        lat: Number(d.lat) || 0, lon: Number(d.lon) || 0,
+        isp: d.isp || d.org || '', mobile: Boolean(d.mobile), proxy: Boolean(d.proxy || d.hosting)
+      };
+    }
+  } catch (_) {}
+  try {
+    const r = await withTimeout(fetch('https://ipwho.is/' + encodeURIComponent(ip)), 6000);
+    const d = await r.json();
+    if (d && d.success !== false && (d.city || d.region)) {
+      return {
+        source: 'ipwho', country: d.country || '', countryCode: d.country_code || '',
+        region: d.region || '', city: d.city || '', district: '', zip: d.postal || '',
+        lat: Number(d.latitude) || 0, lon: Number(d.longitude) || 0,
+        isp: (d.connection && (d.connection.isp || d.connection.org)) || '', mobile: false, proxy: Boolean(d.security && (d.security.vpn || d.security.proxy || d.security.tor))
+      };
+    }
+  } catch (_) {}
+  return null;
+}
+
+function applyGeoToUser(u, info, cleanIp) {
+  if (!u || !info) return;
+  if (!u.manualGeoCity) u.geoCity = info.region || info.city || 'Türkiye';
+  u.geoRegion = info.region || info.city || '';
+  u.geoDistrict = info.district || info.city || '';
+  u.geoSubCity = info.city || '';
+  u.geoCountry = info.country || 'Türkiye';
+  u.geoCountryCode = info.countryCode || '';
+  u.geoZip = info.zip || '';
+  u.geoIsp = info.isp || 'İnternet Servis Sağlayıcı';
+  u.geoLat = info.lat;
+  u.geoLon = info.lon;
+  u.geoMobile = Boolean(info.mobile);
+  u.geoProxy = Boolean(info.proxy);
+  u.geoSource = info.source || '';
+  u.geoIpResolved = cleanIp;
+  u.geoResolvedAt = Date.now();
+}
+
 function resolveGeoIpForUser(userId, rawIp) {
   const cleanIp = String(rawIp || '').trim().replace(/^::ffff:/, '');
   if (!cleanIp || cleanIp === '127.0.0.1' || cleanIp === '::1' || cleanIp === 'localhost' || cleanIp.startsWith('192.168.') || cleanIp.startsWith('10.') || cleanIp.startsWith('172.16.')) {
     return;
   }
-  if (geoIpMemoryCache[cleanIp] === 'pending') return;
-  if (geoIpMemoryCache[cleanIp] && typeof geoIpMemoryCache[cleanIp] === 'object') {
-    const cached = geoIpMemoryCache[cleanIp];
+  const entry = geoIpMemoryCache[cleanIp];
+  if (entry === 'pending') return;
+  if (entry && typeof entry === 'object') {
     const db = central.loadCentralDb();
     const u = db.users.find(x => x.id === userId);
-    if (u && (!u.geoCity || u.geoIpResolved !== cleanIp)) {
-      u.geoCity = cached.city;
-      u.geoRegion = cached.region;
-      u.geoCountry = cached.country;
-      u.geoIsp = cached.isp;
-      u.geoLat = cached.lat;
-      u.geoLon = cached.lon;
-      u.geoIpResolved = cleanIp;
+    if (u && (u.geoIpResolved !== cleanIp || !u.geoSource)) {
+      applyGeoToUser(u, entry, cleanIp);
       central.saveCentralDb(db);
     }
     return;
   }
   geoIpMemoryCache[cleanIp] = 'pending';
-  fetch('https://ipwho.is/' + encodeURIComponent(cleanIp))
-    .then(r => r.json())
-    .then(d => {
-      if (d && d.success !== false && (d.city || d.region)) {
-        const info = {
-          city: d.region || d.city || 'Türkiye',
-          region: d.region || d.city || '',
-          country: d.country || 'Türkiye',
-          isp: (d.connection && (d.connection.isp || d.connection.org)) || 'İnternet Servis Sağlayıcı',
-          lat: Number(d.latitude) || 0,
-          lon: Number(d.longitude) || 0
-        };
-        geoIpMemoryCache[cleanIp] = info;
-        const db = central.loadCentralDb();
-        const u = db.users.find(x => x.id === userId);
-        if (u) {
-          if (!u.manualGeoCity) u.geoCity = info.city;
-          u.geoRegion = info.region;
-          u.geoCountry = info.country;
-          u.geoIsp = info.isp;
-          u.geoLat = info.lat;
-          u.geoLon = info.lon;
-          u.geoIpResolved = cleanIp;
-          central.saveCentralDb(db);
-        }
-      } else {
-        delete geoIpMemoryCache[cleanIp];
-      }
-    })
-    .catch(() => {
-      delete geoIpMemoryCache[cleanIp];
-    });
+  lookupGeoIp(cleanIp).then(info => {
+    if (!info) { delete geoIpMemoryCache[cleanIp]; return; }
+    geoIpMemoryCache[cleanIp] = info;
+    const db = central.loadCentralDb();
+    const u = db.users.find(x => x.id === userId);
+    if (u) { applyGeoToUser(u, info, cleanIp); central.saveCentralDb(db); }
+  }).catch(() => { delete geoIpMemoryCache[cleanIp]; });
 }
 
 function sanitizeUserForClient(u) {
@@ -85,6 +104,7 @@ function sanitizeUserForClient(u) {
     durationKey: u.durationKey,
     planLabel: u.planLabel,
     vipPlan: u.vipPlan || 'Standart',
+    planV2: Boolean(u.planV2),
     paidFeatures: u.paidFeatures || [],
     approvedAt: u.approvedAt || 0,
     expiresAt: u.expiresAt || 0,
@@ -120,6 +140,9 @@ function buildClientSyncPayload(db, user) {
 
   return {
     navConfig: db.navConfig,
+    plans: db.plans || central.defaultPlans(),
+    plansUpdatedAt: db.plansUpdatedAt || 0,
+    me: user ? { vipPlan: user.vipPlan || 'Standart', planV2: Boolean(user.planV2) } : null,
     securitySettings: {
       requireApproval: db.securitySettings?.requireApproval !== false,
       announcementBanner: db.securitySettings?.announcementBanner || '',
@@ -825,6 +848,18 @@ const server = http.createServer((req, res) => {
 
 
         // Etkinlik Günlüğü & Haber Takip (Excel görünümü)
+        if (pathname === '/api/admin/plans-save') {
+          db.plans = central.sanitizePlans(body.plans, db.plans);
+          db.plansUpdatedAt = Date.now();
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
+        if (pathname === '/api/admin/plans-reset') {
+          db.plans = central.defaultPlans();
+          db.plansUpdatedAt = Date.now();
+          central.saveCentralDb(db);
+          return replyJson(200, { ok: true, state: getFullState() });
+        }
         if (pathname === '/api/admin/archive-export') {
           return replyJson(200, { ok: true, ...archive.exportAll() });
         }
@@ -881,7 +916,7 @@ const server = http.createServer((req, res) => {
           u.planLabel = label;
           u.approvedAt = Date.now();
           u.expiresAt = durMs === null ? 'unlimited' : (Date.now() + durMs);
-          if (vipPlan) u.vipPlan = vipPlan;
+          if (vipPlan) { u.vipPlan = vipPlan; u.planV2 = central.PLAN_NAMES.includes(vipPlan); }
           if (Array.isArray(paidFeatures)) u.paidFeatures = paidFeatures;
 
           u.recentActions = u.recentActions || [];
@@ -959,6 +994,7 @@ const server = http.createServer((req, res) => {
             durationKey: isPending ? 'none' : (body.durationKey || '1m'),
             planLabel: isPending ? 'Onay Bekliyor' : label,
             vipPlan: body.vipPlan || 'VIP',
+            planV2: central.PLAN_NAMES.includes(body.vipPlan),
             paidFeatures: ['starkw', 'intel', 'x', 'agenda', 'search', 'trends', 'export'],
             approvedAt: isPending ? 0 : Date.now(),
             expiresAt: isPending ? 0 : (durMs === null ? 'unlimited' : Date.now() + durMs),
@@ -1094,6 +1130,7 @@ const server = http.createServer((req, res) => {
           if (!u) return replyJson(404, { ok: false, error: 'Kullanıcı bulunamadı.' });
           if (Array.isArray(body.paidFeatures)) u.paidFeatures = body.paidFeatures;
           if (body.vipPlan !== undefined) u.vipPlan = body.vipPlan;
+          if (body.planV2 !== undefined) u.planV2 = Boolean(body.planV2) && central.PLAN_NAMES.includes(u.vipPlan);
           if (body.verified !== undefined) u.verified = Boolean(body.verified);
           if (body.contact !== undefined) u.contact = String(body.contact).trim();
           if (body.geoCity !== undefined) {
