@@ -17,8 +17,8 @@
     "announcementBanner": "",
     "systemLock": {
       "enabled": false,
-      "message": "Sistem bakım ve güncelleme nedeniyle geçici olarak durdurulmuştur.",
-      "updatedAt": 1795157400464
+      "message": "Sistem bakım nedeniyle geçici olarak durdurulmuştur.",
+      "updatedAt": 1795158469886
     },
     "lockedUsers": {}
   },
@@ -298,6 +298,15 @@
         "builtin": false,
         "paid": false,
         "customContent": "🚀 YAKINDA GELİYOR, BEKLE!\n\nJ HABER kullanıcıları için çok özel yeni modüller ve canlı analiz araçları hazırlanıyor. Çok yakında bu sekmede aktif olacaktır!"
+      },
+      {
+        "id": "newstrack",
+        "sec": "Araçlar",
+        "ico": "📑",
+        "label": "Haber Takip Excel'i",
+        "visible": true,
+        "builtin": true,
+        "paid": false
       }
     ],
     "subTabs": {
@@ -395,6 +404,140 @@
   },
   "users": [
     {
+      "id": "usr_1795171626814_kpno",
+      "username": "dilara",
+      "password": "123456",
+      "fullName": "",
+      "contact": "5551743730",
+      "verified": false,
+      "status": "active",
+      "durationKey": "1m",
+      "planLabel": "1 Ay (30 Gün)",
+      "vipPlan": "Standart",
+      "paidFeatures": [
+        "starkw",
+        "intel",
+        "x",
+        "agenda",
+        "search",
+        "trends",
+        "export"
+      ],
+      "registeredAt": 1795190230090,
+      "approvedAt": 1795171648039,
+      "expiresAt": 1797763648039,
+      "lastSeenAt": 1795190233570,
+      "lastIp": "62.101.165.184",
+      "lastPort": 33890,
+      "hostname": "PCC",
+      "osInfo": "win32 10.0.26200 (x64)",
+      "trafficRequests": 3,
+      "trafficBytes": 2928,
+      "currentView": "newstrack",
+      "currentViewLabel": "📑 Haber Takip Excel'i",
+      "currentSubMode": "",
+      "keywords": {
+        "starred": [],
+        "general": [],
+        "xSingle": [],
+        "columns": [
+          "Haber: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika",
+          "İstihbarata çalışanlar: İstihbarata çalışanlar",
+          "X: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika"
+        ],
+        "combos": [],
+        "searchQuery": ""
+      },
+      "recentActions": [
+        {
+          "time": 1795190230090,
+          "text": "Aktif oturum bulut tarafından otomatik korundu (62.101.165.184:33828)"
+        }
+      ],
+      "securityFlags": [],
+      "deviceLock": {
+        "enabled": false,
+        "lockedHostname": "PCC"
+      },
+      "forceLogoutAt": 0,
+      "geoCity": "Central Albania",
+      "geoRegion": "Central Albania",
+      "geoCountry": "Albania",
+      "geoIsp": "Keminet SHPK",
+      "geoLat": 41.3274446,
+      "geoLon": 19.8186562,
+      "geoIpResolved": "62.101.165.184"
+    },
+    {
+      "id": "usr_1795164287381_qjp2",
+      "username": "ufuk",
+      "password": "123456",
+      "fullName": "",
+      "contact": "",
+      "verified": false,
+      "status": "active",
+      "durationKey": "1m",
+      "planLabel": "1 Ay (30 Gün)",
+      "vipPlan": "Standart",
+      "paidFeatures": [
+        "starkw",
+        "intel",
+        "x",
+        "agenda",
+        "search",
+        "trends",
+        "export"
+      ],
+      "registeredAt": 1795190227283,
+      "approvedAt": 1795164880581,
+      "expiresAt": 1797756880581,
+      "lastSeenAt": 1795190230760,
+      "lastIp": "212.174.189.136",
+      "lastPort": 33834,
+      "hostname": "vpro",
+      "osInfo": "win32 10.0.26200 (x64)",
+      "trafficRequests": 3,
+      "trafficBytes": 2886,
+      "currentView": "news",
+      "currentViewLabel": "Haberler",
+      "currentSubMode": "TweetDeck Sütunları",
+      "keywords": {
+        "starred": [],
+        "general": [],
+        "xSingle": [],
+        "columns": [
+          "Haber: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika",
+          "İstihbarata çalışanlar: İstihbarata çalışanlar",
+          "X: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika"
+        ],
+        "combos": [],
+        "searchQuery": ""
+      },
+      "recentActions": [
+        {
+          "time": 1795190227284,
+          "text": "Aktif oturum bulut tarafından otomatik korundu (212.174.189.136:50126)"
+        }
+      ],
+      "securityFlags": [],
+      "deviceLock": {
+        "enabled": false,
+        "lockedHostname": "vpro"
+      },
+      "forceLogoutAt": 0,
+      "geoCity": "Ankara",
+      "geoRegion": "Ankara",
+      "geoCountry": "Türkiye",
+      "geoIsp": "Turk Telekomunikasyon Anonim Sirketi",
+      "geoLat": 39.9198651,
+      "geoLon": 32.8542699,
+      "geoIpResolved": "212.174.189.136"
+    },
+    {
       "id": "usr_1795157511810_mfyq",
       "username": "irem",
       "password": "123456",
@@ -417,13 +560,13 @@
       "registeredAt": 1795157511810,
       "approvedAt": 1795157521881,
       "expiresAt": 1797749521881,
-      "lastSeenAt": 1795157897040,
+      "lastSeenAt": 1795190232193,
       "lastIp": "212.174.189.136",
-      "lastPort": 55068,
+      "lastPort": 33862,
       "hostname": "DESKTOP-RJQ62DT",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 109,
-      "trafficBytes": 61792,
+      "trafficRequests": 111,
+      "trafficBytes": 63738,
       "currentView": "news",
       "currentViewLabel": "Haberler",
       "currentSubMode": "Canlı Izgara Görünümü",
@@ -548,18 +691,19 @@
       "approvedAt": 1795082522906,
       "expiresAt": "unlimited",
       "registeredAt": 1795082508765,
-      "lastSeenAt": 1795157898999,
+      "lastSeenAt": 1795190231444,
       "lastIp": "212.174.189.136",
-      "lastPort": 55110,
+      "lastPort": 33846,
       "hostname": "prodesk",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 1823,
-      "trafficBytes": 4047541,
-      "currentView": "news",
-      "currentViewLabel": "Haberler",
-      "currentSubMode": "Canlı Izgara Görünümü",
+      "trafficRequests": 1825,
+      "trafficBytes": 4053085,
+      "currentView": "newstrack",
+      "currentViewLabel": "📑 Haber Takip Excel'i — Paylaştığınız Haberleri İşleyin",
+      "currentSubMode": "",
       "keywords": {
         "starred": [
+          "kadın platformu",
           "suç örgütü",
           "operasyon",
           "sondakika",
@@ -644,6 +788,10 @@
         "searchQuery": ""
       },
       "recentActions": [
+        {
+          "time": 1795190228095,
+          "text": "Sekme değiştirdi: 📑 Haber Takip Excel'i — Paylaştığınız Haberleri İşleyin"
+        },
         {
           "time": 1795157762931,
           "text": "Sekme değiştirdi: Haberler"
@@ -739,10 +887,6 @@
         {
           "time": 1795082545080,
           "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
-        },
-        {
-          "time": 1795082544617,
-          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
         }
       ],
       "securityFlags": [],
@@ -760,7 +904,9 @@
       "geoIpResolved": "62.101.165.160",
       "isLocked": false,
       "lockMessage": "Hesabınız yönetici tarafından geçici olarak kilitlenmiştir. Lütfen yöneticiyle iletişime geçiniz.",
-      "isOnline": true
+      "isOnline": true,
+      "appBuildTime": 1795188440648,
+      "appVersion": "4.3.0"
     }
   ],
   "tickets": [],
