@@ -4371,50 +4371,103 @@ window.AdminApp = AdminApp;
     if (this.view === 'updates' && !this.isTyping()) this.render();
   };
 
+  A.upd.filter = A.upd.filter || 'all';
+
+  A.updRows = function () {
+    const meta = (this.upd && this.upd.meta) || {};
+    const latest = Number(meta.buildTime || 0);
+    const latestVer = String(meta.version || '');
+    const users = (this.state?.db?.users || []).filter(x => x.status === 'active' || x.status === 'pending');
+    const order = { old: 0, unknown: 1, ok: 2 };
+    return users.map(x => {
+      const bt = Number(x.appBuildTime || 0);
+      const ver = String(x.appVersion || '');
+      let state = 'unknown';
+      if (bt || ver) {
+        if ((latest && bt >= latest) || (latestVer && ver === latestVer)) state = 'ok';
+        else state = 'old';
+      }
+      return { x, bt, ver, state, online: this.isOnline(x) };
+    }).sort((a, b) => (order[a.state] - order[b.state]) || String(a.x.username).localeCompare(String(b.x.username), 'tr'));
+  };
+
+  A.exportUpdXlsx = function () {
+    const rows = this.updRows();
+    if (!rows.length) return this.toast('⚠️ Dışa aktarılacak kullanıcı yok.');
+    const label = { ok: 'Güncel', old: 'Güncelleme bekliyor', unknown: 'Sürüm bilinmiyor (eski sürüm)' };
+    window.JHXlsx.download(`J_HABER_Surum_Durumu_${stamp()}.xlsx`, [{
+      name: 'Sürüm Durumu',
+      columns: [
+        { header: 'Kullanıcı', width: 22 }, { header: 'Durum', width: 28 }, { header: 'Sürüm', width: 12 },
+        { header: 'Derleme Tarihi', width: 18 }, { header: 'Çevrimiçi', width: 11 }, { header: 'Son Görülme Gün', width: 16 },
+        { header: 'Son Görülme Saat', width: 14 }, { header: 'Bilgisayar', width: 24 }
+      ],
+      rows: rows.map(({ x, bt, ver, state, online }) => [
+        x.username, label[state], ver ? 'v' + ver : '—', bt ? fmtDate(bt) + ' ' + fmtTime(bt) : '—',
+        online ? 'Evet' : 'Hayır', x.lastSeenAt ? fmtDate(x.lastSeenAt) : '—', x.lastSeenAt ? fmtTime(x.lastSeenAt) : '—', x.hostname || ''
+      ])
+    }]);
+    this.toast('📊 Excel (.xlsx) dosyası indirildi.');
+  };
+
   A.renderUpdates = function (c) {
     const u = this.upd;
     if (!u.loaded && !u.loading) this.loadUpdateInfo();
     const meta = u.meta || {};
-    const users = (this.state?.db?.users || []).filter(x => x.status === 'active' || x.status === 'pending');
     const latest = Number(meta.buildTime || 0);
-    const rows = users.map(x => {
-      const bt = Number(x.appBuildTime || 0);
-      const state = !bt ? 'unknown' : (latest && bt >= latest ? 'ok' : 'old');
-      return { x, bt, state };
-    }).sort((a, b) => (a.state === 'old' ? 0 : 1) - (b.state === 'old' ? 0 : 1));
-    const okCount = rows.filter(r => r.state === 'ok').length;
-    const oldCount = rows.filter(r => r.state === 'old').length;
+    const all = this.updRows();
+    const cnt = { ok: 0, old: 0, unknown: 0, online: 0 };
+    all.forEach(r => { cnt[r.state]++; if (r.online) cnt.online++; });
+    const total = all.length;
+    const pct = total ? Math.round(cnt.ok * 100 / total) : 0;
+    const f = u.filter || 'all';
+    const rows = all.filter(r => f === 'all' || (f === 'online' ? r.online : r.state === f));
+    const chip = (k, label, n) => `<button class="btn ${f === k ? 'primary' : ''}" data-upd-f="${k}" style="padding:5px 12px">${label} (${n})</button>`;
+    const tag = (s) => s === 'ok' ? '<span class="tag ok">✓ Güncel</span>'
+      : s === 'old' ? '<span class="tag warn">⏳ Güncelleme bekliyor</span>'
+        : '<span class="tag">❓ Sürüm bilinmiyor (eski sürüm)</span>';
     const html = `
       <div class="panel" style="border-color:var(--accent)">
         <h2>🚀 Sürüm & Otomatik Güncelleme Merkezi</h2>
-        <p class="hint">Bu bilgisayarda yeni bir sürüm yayınladığınız anda, internete bağlı tüm J HABER kullanıcıları arka planda güncellemeyi indirir ve uygulamayı otomatik olarak yeniler (en geç ~25 saniye içinde).</p>
+        <p class="hint">Yeni sürüm yayınlandığında açık olan tüm J HABER uygulamaları ~25 sn içinde indirip kurar. Kapalı olanlar bir sonraki açılışta günceller. Aşağıda kimin hangi sürümü kullandığı görünür.</p>
         <div class="grid4" style="margin:10px 0">
-          <div class="panel" style="margin:0;text-align:center"><div class="hint">Yayındaki Sürüm</div><div style="font-size:22px;font-weight:900;color:#fbbf24">${this.esc(meta.version || '—')}</div></div>
-          <div class="panel" style="margin:0;text-align:center"><div class="hint">Yayın Zamanı</div><div style="font-size:14px;font-weight:800;color:#60a5fa;margin-top:6px">${latest ? fmtDate(latest) + ' ' + fmtTime(latest) : '—'}</div></div>
-          <div class="panel" style="margin:0;text-align:center"><div class="hint">Güncel Kullanıcı</div><div style="font-size:22px;font-weight:900;color:#22c55e">${okCount}</div></div>
-          <div class="panel" style="margin:0;text-align:center"><div class="hint">Güncelleme Bekleyen</div><div style="font-size:22px;font-weight:900;color:#f59e0b">${oldCount}</div></div>
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Yayındaki Sürüm</div><div style="font-size:22px;font-weight:900;color:#fbbf24">v${this.esc(meta.version || '—')}</div><div class="hint">${latest ? fmtDate(latest) + ' ' + fmtTime(latest) : ''}</div></div>
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Güncel</div><div style="font-size:22px;font-weight:900;color:#22c55e">${cnt.ok} / ${total}</div><div class="hint">%${pct}</div></div>
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Güncelleme Bekleyen</div><div style="font-size:22px;font-weight:900;color:#f59e0b">${cnt.old}</div></div>
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Sürümü Bilinmeyen</div><div style="font-size:22px;font-weight:900;color:#94a3b8">${cnt.unknown}</div></div>
         </div>
-        <div class="hint" style="margin-bottom:10px">📝 Değişiklik notu: <b>${this.esc(meta.changelog || '—')}</b> · Paket boyutu: ${meta.asarSize ? (meta.asarSize / 1048576).toFixed(1) + ' MB' : '—'}</div>
-        <div class="panel" style="background:var(--bg);margin-bottom:12px">
-          <b>Yeni sürüm nasıl yayınlanır?</b>
-          <div class="hint" style="margin-top:4px">Proje klasöründeki <code>GUNCELLEMEYI_YAYINLA.bat</code> dosyasına çift tıklayın. Kaynak kodlar paketlenir, bu bilgisayardaki uygulama güncellenir ve paket buluta yüklenir; tüm kullanıcılar otomatik güncellenir.</div>
+        <div style="height:8px;border-radius:6px;background:var(--line);overflow:hidden;margin-bottom:10px"><div style="height:100%;width:${pct}%;background:#22c55e"></div></div>
+        <div class="hint" style="margin-bottom:8px">📝 Değişiklik notu: <b>${this.esc(meta.changelog || '—')}</b> · Paket: ${meta.asarSize ? (meta.asarSize / 1048576).toFixed(1) + ' MB' : '—'}</div>
+        ${cnt.unknown + cnt.old ? `<div class="panel" style="background:var(--bg);margin-bottom:10px"><b>⚠️ ${cnt.unknown + cnt.old} kullanıcı güncel değil</b>
+          <div class="hint" style="margin-top:4px">"Sürüm bilinmiyor" olanlar, sürüm bildirmeyen eski bir sürümü kullanıyor ya da uygulamayı henüz açmadı. Bu kullanıcılara <code>GUNCELLE.bat</code> dosyasını gönderip bir kez çalıştırmalarını isteyin; sonrası otomatik olur.</div></div>` : ''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+          ${chip('all', 'Tümü', total)}${chip('ok', '✓ Güncel', cnt.ok)}${chip('old', '⏳ Bekleyen', cnt.old)}${chip('unknown', '❓ Bilinmeyen', cnt.unknown)}${chip('online', '🟢 Çevrimiçi', cnt.online)}
+          <span style="flex:1"></span>
+          <button class="btn" id="upd-refresh">↻ Yenile</button>
+          <button class="btn" id="upd-xlsx">📊 Excel'e Aktar</button>
         </div>
         <div style="overflow:auto;max-height:55vh;border:1px solid var(--line);border-radius:10px">
           <table class="tbl">
-            <thead><tr><th>Kullanıcı</th><th>Durum</th><th>Kullandığı Sürüm</th><th>Son Görülme</th></tr></thead>
+            <thead><tr><th>Kullanıcı</th><th>Durum</th><th>Sürüm</th><th>Derleme Tarihi</th><th>Çevrimiçi</th><th>Son Görülme</th><th>Bilgisayar</th></tr></thead>
             <tbody>
-              ${rows.map(({ x, bt, state }) => `
+              ${rows.map(({ x, bt, ver, state, online }) => `
                 <tr>
                   <td><b style="color:#fbbf24">${this.esc(x.username)}</b></td>
-                  <td>${state === 'ok' ? '<span class="tag ok">✓ Güncel</span>' : state === 'old' ? '<span class="tag warn">⏳ Güncelleme bekliyor</span>' : '<span class="tag">Bilinmiyor (eski sürüm)</span>'}</td>
-                  <td class="hint">${bt ? fmtDate(bt) + ' ' + fmtTime(bt) + (x.appVersion ? ' · v' + this.esc(x.appVersion) : '') : '—'}</td>
+                  <td>${tag(state)}</td>
+                  <td><b>${ver ? 'v' + this.esc(ver) : '—'}</b></td>
+                  <td class="hint">${bt ? fmtDate(bt) + ' ' + fmtTime(bt) : '—'}</td>
+                  <td>${online ? '<span style="color:#22c55e">● Çevrimiçi</span>' : '<span class="hint">○ Çevrimdışı</span>'}</td>
                   <td class="hint">${x.lastSeenAt ? this.relTime(x.lastSeenAt) : '—'}</td>
-                </tr>`).join('') || '<tr><td colspan="4" class="hint" style="text-align:center;padding:20px">Kullanıcı yok.</td></tr>'}
+                  <td class="hint">${this.esc(x.hostname || '—')}</td>
+                </tr>`).join('') || '<tr><td colspan="7" class="hint" style="text-align:center;padding:20px">Bu filtrede kullanıcı yok.</td></tr>'}
             </tbody>
           </table>
         </div>
       </div>`;
-    setHtml(c, 'upd', html);
+    setHtml(c, 'upd:' + f, html);
+    c.querySelectorAll('[data-upd-f]').forEach(b => { b.onclick = () => { this.upd.filter = b.dataset.updF; this.render(); }; });
+    const rf = c.querySelector('#upd-refresh'); if (rf) rf.onclick = () => { this.loadUpdateInfo(); this.toast('↻ Yenilendi'); };
+    const xl = c.querySelector('#upd-xlsx'); if (xl) xl.onclick = () => this.exportUpdXlsx();
   };
 
   // Görünüm sekmesi açıkken kayıtları canlı tazele

@@ -646,6 +646,7 @@ const server = http.createServer((req, res) => {
         resolveGeoIpForUser(u.id, rawIp);
         u.hostname = body.hostname || u.hostname || '';
         u.osInfo = body.osInfo || u.osInfo || '';
+        if (body.appBuildTime) { u.appBuildTime = Number(body.appBuildTime) || 0; u.appVersion = String(body.appVersion || '').slice(0, 20); }
         u.trafficRequests = (u.trafficRequests || 0) + 1;
         u.trafficBytes = (u.trafficBytes || 0) + bodyRaw.length;
 
