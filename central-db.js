@@ -179,6 +179,7 @@ function loadCentralDb() {
   if (!Array.isArray(db.adminContent.pushedFeeds)) db.adminContent.pushedFeeds = [];
   if (!Array.isArray(db.adminContent.pushedStarKeywords)) db.adminContent.pushedStarKeywords = [];
   if (!Array.isArray(db.users)) db.users = [];
+  if (!Array.isArray(db.deletedUsernames)) db.deletedUsernames = [];
   if (!Array.isArray(db.tickets)) db.tickets = [];
   if (!Array.isArray(db.trafficLogs)) db.trafficLogs = [];
   db.branding = { ...DEFAULT_BRANDING, ...(db.branding || {}) };
@@ -195,6 +196,165 @@ function loadCentralDb() {
   return db;
 }
 
+let _backupTimer = null;
+let _backupInFlight = false;
+let _lastBackupUsersJson = '';
+
+function getBackupToken() {
+  return process.env.GH_BACKUP_TOKEN || '';
+}
+
+async function pushDbToGithubBackupNow() {
+  if (_backupInFlight) return;
+  // Test portlarında (49123, 49876, 49877, 49888) bulut yedeğini ezme
+  const p = String(process.env.PORT || '');
+  if (p === '49123' || p === '49876' || p === '49877' || p === '49888') return;
+
+  const tok = getBackupToken();
+  if (!tok) return;
+
+  _backupInFlight = true;
+  try {
+    const db = loadCentralDb();
+    const apiUrl = 'https://api.github.com/repos/aliveli75495075/jhaber-cloud-server/contents/data/central-db.json';
+    const getRes = await fetch(apiUrl + '?ref=db-backup', {
+      headers: {
+        'Authorization': 'Bearer ' + tok,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'JHaber-Cloud-Server'
+      }
+    });
+    let sha = undefined;
+    if (getRes.ok) {
+      const getData = await getRes.json();
+      sha = getData.sha;
+    }
+    const contentB64 = Buffer.from(JSON.stringify(db, null, 2), 'utf8').toString('base64');
+    await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'Bearer ' + tok,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'JHaber-Cloud-Server'
+      },
+      body: JSON.stringify({
+        message: 'Auto-persist central-db users and state',
+        content: contentB64,
+        sha,
+        branch: 'db-backup'
+      })
+    });
+  } catch (_) {
+  } finally {
+    _backupInFlight = false;
+  }
+}
+
+function scheduleCloudBackup(db) {
+  try {
+    // Yalnızca kullanıcı listesi, onay/süre, ayar veya içerik değiştiğinde yedekle (salt heartbeat sayacı için gereksiz yazma yapma)
+    const sig = JSON.stringify({
+      users: (db.users || []).map(u => ({
+        id: u.id, username: u.username, password: u.password, fullName: u.fullName,
+        contact: u.contact, status: u.status, durationKey: u.durationKey,
+        planLabel: u.planLabel, vipPlan: u.vipPlan, expiresAt: u.expiresAt,
+        approvedAt: u.approvedAt, isLocked: u.isLocked, geoCity: u.geoCity,
+        manualGeoCity: u.manualGeoCity, paidFeatures: u.paidFeatures
+      })),
+      deletedUsernames: db.deletedUsernames || [],
+      adminAuth: db.adminAuth,
+      navConfig: db.navConfig?.updatedAt,
+      securitySettings: db.securitySettings,
+      branding: db.branding,
+      postsLen: db.adminContent?.posts?.length || 0,
+      ticketsLen: db.tickets?.length || 0
+    });
+    if (sig === _lastBackupUsersJson) return;
+    _lastBackupUsersJson = sig;
+
+    clearTimeout(_backupTimer);
+    _backupTimer = setTimeout(() => {
+      pushDbToGithubBackupNow();
+    }, 2500);
+  } catch (_) {}
+}
+
+async function restoreDbFromCloudBackup() {
+  const p = String(process.env.PORT || '');
+  if (p === '49123' || p === '49876' || p === '49877' || p === '49888') return;
+
+  const tok = getBackupToken();
+  if (!tok) return;
+
+  try {
+    const apiUrl = 'https://api.github.com/repos/aliveli75495075/jhaber-cloud-server/contents/data/central-db.json?ref=db-backup';
+    const res = await fetch(apiUrl, {
+      headers: {
+        'Authorization': 'Bearer ' + tok,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'JHaber-Cloud-Server'
+      }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data || !data.content) return;
+    const remoteDb = JSON.parse(Buffer.from(data.content, 'base64').toString('utf8'));
+    if (!remoteDb || !Array.isArray(remoteDb.users)) return;
+
+    const localDb = loadCentralDb();
+    const deletedSet = new Set([
+      ...(localDb.deletedUsernames || []),
+      ...(remoteDb.deletedUsernames || [])
+    ].map(s => String(s).toLowerCase()));
+
+    localDb.deletedUsernames = Array.from(deletedSet);
+
+    // Uzak yedekteki kullanıcıları yerel veritabanıyla birleştir (hiçbir üyelik kaybolmasın!)
+    const byUsername = new Map();
+    for (const u of (localDb.users || [])) {
+      if (u && u.username && !deletedSet.has(u.username.toLowerCase())) {
+        byUsername.set(u.username.toLowerCase(), u);
+      }
+    }
+    for (const ru of (remoteDb.users || [])) {
+      if (!ru || !ru.username) continue;
+      const key = ru.username.toLowerCase();
+      if (deletedSet.has(key)) continue;
+      const existing = byUsername.get(key);
+      if (!existing) {
+        byUsername.set(key, ru);
+      } else {
+        // Hangisi daha güncelse veya onaylıysa onu koru
+        const rSeen = Number(ru.lastSeenAt || ru.approvedAt || ru.registeredAt || 0);
+        const lSeen = Number(existing.lastSeenAt || existing.approvedAt || existing.registeredAt || 0);
+        if (ru.status === 'active' && existing.status !== 'active') {
+          byUsername.set(key, { ...existing, ...ru });
+        } else if (rSeen > lSeen) {
+          byUsername.set(key, { ...existing, ...ru });
+        }
+      }
+    }
+
+    localDb.users = Array.from(byUsername.values());
+    if (remoteDb.adminAuth && remoteDb.adminAuth.password && remoteDb.adminAuth.password !== '123456') {
+      localDb.adminAuth = remoteDb.adminAuth;
+    }
+    if (Number(remoteDb.navConfig?.updatedAt || 0) > Number(localDb.navConfig?.updatedAt || 0)) {
+      localDb.navConfig = remoteDb.navConfig;
+    }
+    if (remoteDb.branding) {
+      localDb.branding = { ...localDb.branding, ...remoteDb.branding };
+    }
+
+    const fp = getCentralFilePath();
+    fs.writeFileSync(fp, JSON.stringify(localDb, null, 2), 'utf8');
+    console.log(`[J HABER CLOUD] Kalıcı bulut yedeğinden ${localDb.users.length} kullanıcı başarıyla geri yüklendi.`);
+  } catch (e) {
+    console.error('[J HABER CLOUD] Yedek geri yükleme hatası:', e.message);
+  }
+}
+
 function saveCentralDb(db) {
   const fp = getCentralFilePath();
   try {
@@ -204,6 +364,7 @@ function saveCentralDb(db) {
   } catch {
     try { fs.writeFileSync(fp, JSON.stringify(db, null, 2), 'utf8'); } catch {}
   }
+  scheduleCloudBackup(db);
 }
 
 function addTrafficLog(db, entry) {
@@ -263,6 +424,8 @@ module.exports = {
   getCentralFilePath,
   loadCentralDb,
   saveCentralDb,
+  restoreDbFromCloudBackup,
+  pushDbToGithubBackupNow,
   addTrafficLog,
   computeDurationMs,
   durationLabel

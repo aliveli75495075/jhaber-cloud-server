@@ -405,6 +405,7 @@ const server = http.createServer((req, res) => {
           forceLogoutAt: 0
         };
 
+        db.deletedUsernames = (db.deletedUsernames || []).filter(n => String(n).toLowerCase() !== username.toLowerCase());
         db.users.unshift(newUser);
         central.addTrafficLog(db, {
           type: 'register',
@@ -421,7 +422,51 @@ const server = http.createServer((req, res) => {
       if (pathname === '/api/login' && req.method === 'POST') {
         const username = String(body.username || '').trim();
         const password = String(body.password || '').trim();
-        const u = db.users.find(x => x.username.toLowerCase() === username.toLowerCase() && x.password === password);
+        const deletedList = (db.deletedUsernames || []).map(s => String(s).toLowerCase());
+        const isDeletedByAdmin = deletedList.includes(username.toLowerCase());
+
+        let u = db.users.find(x => x.username.toLowerCase() === username.toLowerCase() && x.password === password);
+
+        // Eğer sunucu gece uyku modundan yeni uyandıysa ve kullanıcı yönetici tarafından silinmemişse, istemci oturum yedeğinden otomatik kurtar!
+        if (!u && !isDeletedByAdmin && username && password && body.userSnapshot && body.userSnapshot.username && body.userSnapshot.username.toLowerCase() === username.toLowerCase()) {
+          const snap = body.userSnapshot;
+          const existingByName = db.users.find(x => x.username.toLowerCase() === username.toLowerCase());
+          if (!existingByName) {
+            u = {
+              id: snap.id || ('usr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
+              username,
+              password,
+              fullName: snap.fullName || '',
+              contact: snap.contact || '',
+              verified: Boolean(snap.verified),
+              status: snap.status || 'active',
+              durationKey: snap.durationKey || '1m',
+              planLabel: snap.planLabel || '1 Ay (30 Gün)',
+              vipPlan: snap.vipPlan || 'Standart',
+              paidFeatures: Array.isArray(snap.paidFeatures) ? snap.paidFeatures : ['starkw', 'intel', 'x', 'agenda', 'search', 'trends', 'export'],
+              registeredAt: snap.registeredAt || Date.now(),
+              approvedAt: snap.approvedAt || Date.now(),
+              expiresAt: snap.expiresAt || 'unlimited',
+              lastSeenAt: Date.now(),
+              lastIp: rawIp,
+              lastPort: clientPort,
+              hostname: body.hostname || '',
+              osInfo: body.osInfo || '',
+              trafficRequests: 1,
+              trafficBytes: bodyRaw.length,
+              currentView: 'news',
+              currentViewLabel: '📰 Haberler',
+              currentSubMode: '',
+              keywords: { starred: [], general: [], xSingle: [], columns: [], combos: [], searchQuery: '' },
+              recentActions: [{ time: Date.now(), text: `Oturum bulut senkronizasyonu ile otomatik devam etti (${ipPort})` }],
+              securityFlags: [],
+              deviceLock: { enabled: false, lockedHostname: body.hostname || '' },
+              forceLogoutAt: 0
+            };
+            db.users.unshift(u);
+          }
+        }
+
         if (!u) {
           central.addTrafficLog(db, {
             type: 'security',
@@ -430,7 +475,7 @@ const server = http.createServer((req, res) => {
             detail: 'Hatalı kullanıcı adı veya şifre ile giriş denemesi!'
           });
           central.saveCentralDb(db);
-          return replyJson(401, { ok: false, error: 'Kullanıcı adı veya şifre hatalı.' });
+          return replyJson(401, { ok: false, deletedByAdmin: isDeletedByAdmin, error: isDeletedByAdmin ? 'Üyeliğiniz yönetici tarafından silinmiştir.' : 'Kullanıcı adı veya şifre hatalı.' });
         }
 
         if (u.deviceLock?.enabled && u.deviceLock?.lockedHostname && body.hostname && u.deviceLock.lockedHostname !== body.hostname) {
@@ -478,9 +523,58 @@ const server = http.createServer((req, res) => {
 
       // 4. Canlı Kalp Atışı (Heartbeat)
       if (pathname === '/api/heartbeat' && req.method === 'POST') {
-        const u = db.users.find(x => x.id === body.userId || (body.username && x.username.toLowerCase() === String(body.username).toLowerCase()));
+        const reqUsername = String(body.username || '').trim();
+        const deletedList = (db.deletedUsernames || []).map(s => String(s).toLowerCase());
+        const isDeletedByAdmin = reqUsername ? deletedList.includes(reqUsername.toLowerCase()) : false;
+
+        let u = db.users.find(x => x.id === body.userId || (reqUsername && x.username.toLowerCase() === reqUsername.toLowerCase()));
+
+        // Eğer kullanıcı yönetici tarafından silinmediyse fakat sunucu yeniden başladığı için listede yoksa, oturumu kapatmak yerine otomatik geri yükle!
+        if (!u && reqUsername && !isDeletedByAdmin && (body.userId || body.userSnapshot)) {
+          const snap = body.userSnapshot || {};
+          u = {
+            id: body.userId || snap.id || ('usr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
+            username: reqUsername,
+            password: snap.password || body.password || '123456',
+            fullName: snap.fullName || '',
+            contact: snap.contact || '',
+            verified: snap.verified !== undefined ? Boolean(snap.verified) : true,
+            status: snap.status || 'active',
+            durationKey: snap.durationKey || '1m',
+            planLabel: snap.planLabel || '1 Ay (30 Gün)',
+            vipPlan: snap.vipPlan || 'Standart',
+            paidFeatures: Array.isArray(snap.paidFeatures) ? snap.paidFeatures : ['starkw', 'intel', 'x', 'agenda', 'search', 'trends', 'export'],
+            registeredAt: snap.registeredAt || Date.now(),
+            approvedAt: snap.approvedAt || Date.now(),
+            expiresAt: snap.expiresAt || (Date.now() + 30 * 86400 * 1000),
+            lastSeenAt: Date.now(),
+            lastIp: rawIp,
+            lastPort: clientPort,
+            hostname: body.hostname || '',
+            osInfo: body.osInfo || '',
+            trafficRequests: 1,
+            trafficBytes: bodyRaw.length,
+            currentView: body.currentView || 'news',
+            currentViewLabel: body.currentViewLabel || '📰 Haberler',
+            currentSubMode: body.currentSubMode || '',
+            keywords: { starred: [], general: [], xSingle: [], columns: [], combos: [], searchQuery: '' },
+            recentActions: [{ time: Date.now(), text: `Aktif oturum bulut tarafından otomatik korundu (${ipPort})` }],
+            securityFlags: [],
+            deviceLock: { enabled: false, lockedHostname: body.hostname || '' },
+            forceLogoutAt: 0
+          };
+          db.users.unshift(u);
+          central.saveCentralDb(db);
+        }
+
         if (!u) {
-          return replyJson(200, { ok: false, notFound: true, fromServer: true, centralState: buildClientSyncPayload(db, null) });
+          return replyJson(200, {
+            ok: false,
+            notFound: true,
+            deletedByAdmin: isDeletedByAdmin,
+            fromServer: true,
+            centralState: buildClientSyncPayload(db, null)
+          });
         }
         const prevView = u.currentView;
         u.lastIp = rawIp;
@@ -703,6 +797,12 @@ const server = http.createServer((req, res) => {
 
         // Kullanıcı Sil
         if (pathname === '/api/admin/user-delete') {
+          const targetU = db.users.find(x => x.id === body.userId);
+          if (targetU && targetU.username) {
+            db.deletedUsernames = db.deletedUsernames || [];
+            const low = targetU.username.toLowerCase();
+            if (!db.deletedUsernames.includes(low)) db.deletedUsernames.push(low);
+          }
           db.users = db.users.filter(x => x.id !== body.userId);
           central.saveCentralDb(db);
           return replyJson(200, { ok: true, state: getFullState() });
@@ -716,6 +816,7 @@ const server = http.createServer((req, res) => {
           if (db.users.some(x => x.username.toLowerCase() === uname.toLowerCase())) {
             return replyJson(409, { ok: false, error: 'Bu kullanıcı adı zaten kayıtlı.' });
           }
+          db.deletedUsernames = (db.deletedUsernames || []).filter(n => String(n).toLowerCase() !== uname.toLowerCase());
           const durMs = central.computeDurationMs(body.durationKey || '1m', 30);
           const label = central.durationLabel(body.durationKey || '1m', 30);
           const isPending = body.durationKey === 'pending';
@@ -1550,7 +1651,20 @@ function getAdminHtml() {
 }
 
 // Sunucuyu Başlat
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`[J HABER CLOUD] Sunucu port ${PORT} üzerinde 7/24 aktif!`);
   console.log(`[J HABER CLOUD] Web Yönetim Paneli: http://localhost:${PORT}/admin`);
+
+  // Başlangıçta kalıcı GitHub db-backup dalından tüm kullanıcıları ve ayarları geri yükle
+  if (typeof central.restoreDbFromCloudBackup === 'function') {
+    await central.restoreDbFromCloudBackup();
+  }
+
+  // Render.com uyku modunu (spin-down) önlemek için her 8 dakikada bir kendi kendine Keep-Alive Ping at
+  const p = String(process.env.PORT || '');
+  if (p !== '49123' && p !== '49876' && p !== '49877' && p !== '49888') {
+    setInterval(() => {
+      fetch('https://jhaber-server.onrender.com/api/ping').catch(() => {});
+    }, 8 * 60 * 1000);
+  }
 });

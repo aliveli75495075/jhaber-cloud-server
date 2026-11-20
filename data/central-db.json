@@ -18,7 +18,7 @@
     "systemLock": {
       "enabled": false,
       "message": "Sistem bakım nedeniyle geçici olarak durdurulmuştur.",
-      "updatedAt": 1795120226013
+      "updatedAt": 1795158469886
     },
     "lockedUsers": {}
   },
@@ -290,7 +290,7 @@
       },
       {
         "id": "custom_coming_soon",
-        "sec": "Akış & Sütunlar",
+        "sec": "Yönetim",
         "ico": "⏳",
         "label": "Yakında Geliyor, Bekle!",
         "orange": true,
@@ -372,7 +372,7 @@
         "paid": false
       }
     },
-    "updatedAt": 1795121030783
+    "updatedAt": 1795157732050
   },
   "adminContent": {
     "posts": [
@@ -394,6 +394,82 @@
     "broadcastPopup": null
   },
   "users": [
+    {
+      "id": "usr_1795157511810_mfyq",
+      "username": "irem",
+      "password": "123456",
+      "fullName": "",
+      "contact": "",
+      "verified": false,
+      "status": "active",
+      "durationKey": "1m",
+      "planLabel": "1 Ay (30 Gün)",
+      "vipPlan": "Standart",
+      "paidFeatures": [
+        "starkw",
+        "intel",
+        "x",
+        "agenda",
+        "search",
+        "trends",
+        "export"
+      ],
+      "registeredAt": 1795157511810,
+      "approvedAt": 1795157521881,
+      "expiresAt": 1797749521881,
+      "lastSeenAt": 1795157897040,
+      "lastIp": "212.174.189.136",
+      "lastPort": 55068,
+      "hostname": "DESKTOP-RJQ62DT",
+      "osInfo": "win32 10.0.26200 (x64)",
+      "trafficRequests": 109,
+      "trafficBytes": 61792,
+      "currentView": "news",
+      "currentViewLabel": "Haberler",
+      "currentSubMode": "Canlı Izgara Görünümü",
+      "keywords": {
+        "starred": [],
+        "general": [],
+        "xSingle": [],
+        "columns": [
+          "Haber: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika",
+          "İstihbarata çalışanlar: İstihbarata çalışanlar",
+          "X: son dakika: son dakika",
+          "İlişkili: son dakika: son dakika"
+        ],
+        "combos": [],
+        "searchQuery": ""
+      },
+      "recentActions": [
+        {
+          "time": 1795157526084,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795157521881,
+          "text": "Yönetici tarafından üyelik ONAYLANDI (Süre: 1 Ay (30 Gün))"
+        },
+        {
+          "time": 1795157511810,
+          "text": "Üyelik oluşturuldu (212.174.189.136:55822) — Yönetici onayı ve süre tanımlaması bekleniyor."
+        }
+      ],
+      "securityFlags": [],
+      "deviceLock": {
+        "enabled": false,
+        "lockedHostname": "DESKTOP-RJQ62DT"
+      },
+      "forceLogoutAt": 0,
+      "geoCity": "Ankara",
+      "geoRegion": "Ankara",
+      "geoCountry": "Türkiye",
+      "geoIsp": "Turk Telekomunikasyon Anonim Sirketi",
+      "geoLat": 39.9198651,
+      "geoLon": 32.8542699,
+      "geoIpResolved": "212.174.189.136",
+      "isOnline": true
+    },
     {
       "id": "usr_1795089252461_f11x",
       "username": "bulut_test_1795089252454",
@@ -446,7 +522,8 @@
         "enabled": false,
         "lockedHostname": ""
       },
-      "forceLogoutAt": 0
+      "forceLogoutAt": 0,
+      "isOnline": false
     },
     {
       "id": "usr_1795082508765_tdir",
@@ -471,16 +548,16 @@
       "approvedAt": 1795082522906,
       "expiresAt": "unlimited",
       "registeredAt": 1795082508765,
-      "lastSeenAt": 1795089088059,
-      "lastIp": "127.0.0.1",
-      "lastPort": 54156,
+      "lastSeenAt": 1795157898999,
+      "lastIp": "212.174.189.136",
+      "lastPort": 55110,
       "hostname": "prodesk",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 1637,
-      "trafficBytes": 3627852,
-      "currentView": "starkw",
-      "currentViewLabel": "🌟 Yıldızlı Anahtar Kelimeler (Haber Siteleri + X Birleşik Takip)",
-      "currentSubMode": "Tek Sütun Birleşik Akış",
+      "trafficRequests": 1823,
+      "trafficBytes": 4047541,
+      "currentView": "news",
+      "currentViewLabel": "Haberler",
+      "currentSubMode": "Canlı Izgara Görünümü",
       "keywords": {
         "starred": [
           "suç örgütü",
@@ -526,9 +603,9 @@
           "İlişkili: son dakika: son dakika",
           "Kelime: OPERASYON: OPERASYON",
           "Kelime: YÜRÜYÜŞ: YÜRÜYÜŞ",
-          "BAHİS: YASA DIŞI BAHİS",
           "Kelime: CUMHURBAŞKANI: CUMHURBAŞKANI",
           "SUÇ ÖRGÜTÜ: YENİ NESİL SUÇ ÖRGÜTÜ",
+          "BAHİS: YASA DIŞI BAHİS",
           "Kelime: ANKARA SON DAKİKA: ANKARA SON DAKİKA",
           "Kelime: C31K: C31K",
           "Kelime: OKUL SALDIRI: OKUL SALDIRI",
@@ -568,6 +645,66 @@
       },
       "recentActions": [
         {
+          "time": 1795157762931,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795157742828,
+          "text": "Sekme değiştirdi: ⏳ Yakında Geliyor, Bekle!"
+        },
+        {
+          "time": 1795157742165,
+          "text": "Sekme değiştirdi: 📢 Yönetici Duyuruları, Özel Yazılar & Bilgilendirmeler"
+        },
+        {
+          "time": 1795157738957,
+          "text": "Sekme değiştirdi: ⏳ Yakında Geliyor, Bekle!"
+        },
+        {
+          "time": 1795157738097,
+          "text": "Sekme değiştirdi: 💬 Yöneticiyle İletişime Geç — Şikayet, Talep & Destek Merkezi"
+        },
+        {
+          "time": 1795157737153,
+          "text": "Sekme değiştirdi: ⏳ Yakında Geliyor, Bekle!"
+        },
+        {
+          "time": 1795157704641,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795157704275,
+          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
+        },
+        {
+          "time": 1795157703788,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795157696837,
+          "text": "Sekme değiştirdi: ⏳ Yakında Geliyor, Bekle!"
+        },
+        {
+          "time": 1795157563703,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795157563268,
+          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
+        },
+        {
+          "time": 1795157362551,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
+          "time": 1795157360942,
+          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
+        },
+        {
+          "time": 1795157276761,
+          "text": "Sekme değiştirdi: Haberler"
+        },
+        {
           "time": 1795088906064,
           "text": "Sekme değiştirdi: 🌟 Yıldızlı Anahtar Kelimeler (Haber Siteleri + X Birleşik Takip)"
         },
@@ -606,26 +743,6 @@
         {
           "time": 1795082544617,
           "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
-        },
-        {
-          "time": 1795082544273,
-          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
-        },
-        {
-          "time": 1795082544123,
-          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
-        },
-        {
-          "time": 1795082522906,
-          "text": "Yönetici tarafından üyelik ONAYLANDI (Süre: Sınırsız (Ömür Boyu))"
-        },
-        {
-          "time": 1795082512657,
-          "text": "Yönetici tarafından üyelik ONAYLANDI (Süre: 1 Ay (30 Gün))"
-        },
-        {
-          "time": 1795082508765,
-          "text": "Üyelik oluşturuldu (127.0.0.1:54216) — Yönetici onayı ve süre tanımlaması bekleniyor."
         }
       ],
       "securityFlags": [],
@@ -633,11 +750,53 @@
         "enabled": false,
         "lockedHostname": "prodesk"
       },
-      "forceLogoutAt": 0
+      "forceLogoutAt": 0,
+      "geoCity": "Central Albania",
+      "geoRegion": "Central Albania",
+      "geoCountry": "Albania",
+      "geoIsp": "Keminet SHPK",
+      "geoLat": 41.3274446,
+      "geoLon": 19.8186562,
+      "geoIpResolved": "62.101.165.160",
+      "isLocked": false,
+      "lockMessage": "Hesabınız yönetici tarafından geçici olarak kilitlenmiştir. Lütfen yöneticiyle iletişime geçiniz.",
+      "isOnline": true
     }
   ],
   "tickets": [],
   "trafficLogs": [
+    {
+      "id": "log_1795157521881_lfld",
+      "time": 1795157521881,
+      "type": "approve",
+      "username": "irem",
+      "ipPort": "212.174.189.136:53452",
+      "detail": "Üyelik onaylandı ve \"1 Ay (30 Gün)\" süre tanımlandı."
+    },
+    {
+      "id": "log_1795157511810_t531",
+      "time": 1795157511810,
+      "type": "register",
+      "username": "irem",
+      "ipPort": "212.174.189.136:55822",
+      "detail": "Yeni üyelik oluşturuldu (Doğrulanmamış). Onay bekliyor."
+    },
+    {
+      "id": "log_1795157504298_d2sl",
+      "time": 1795157504298,
+      "type": "security",
+      "username": "irem",
+      "ipPort": "212.174.189.136:38420",
+      "detail": "Hatalı kullanıcı adı veya şifre ile giriş denemesi!"
+    },
+    {
+      "id": "log_1795157483953_crnl",
+      "time": 1795157483953,
+      "type": "security",
+      "username": "irem",
+      "ipPort": "212.174.189.136:56156",
+      "detail": "Hatalı kullanıcı adı veya şifre ile giriş denemesi!"
+    },
     {
       "id": "log_1795089252461_bst0",
       "time": 1795089252461,
@@ -706,5 +865,6 @@
       "branding": "Görünüm & Marka Özelleştirme"
     },
     "updatedAt": 1795113743078
-  }
+  },
+  "deletedUsernames": []
 }
