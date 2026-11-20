@@ -54,6 +54,7 @@ const DEFAULT_SIDEBAR_ITEMS = [
   { id: 'saved', sec: 'Akış & Sütunlar', ico: '🔖', label: 'Kaydedilenler', badge: 'saved', visible: true, builtin: true, paid: false },
   { id: 'search', sec: 'Araçlar', ico: '🔍', label: 'Görsel & Birleşik Arama', visible: true, builtin: true, paid: false },
   { id: 'trends', sec: 'Araçlar', ico: '📈', label: 'Kelime Yoğunluk Grafiği', visible: true, builtin: true, paid: false },
+  { id: 'newstrack', sec: 'Araçlar', ico: '📑', label: "Haber Takip Excel'i", visible: true, builtin: true, paid: false },
   { id: 'arindir', sec: 'Araçlar', ico: '🧹', label: 'Arındır Filtresi', visible: true, builtin: true, paid: false },
   { id: 'notes', sec: 'Araçlar', ico: '📝', label: 'Notlar', badge: 'notes', visible: true, builtin: true, paid: false },
   { id: 'calc', sec: 'Araçlar', ico: '🧮', label: 'Hesap Makinesi', visible: true, builtin: true, paid: false },

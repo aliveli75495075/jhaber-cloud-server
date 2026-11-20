@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const central = require('./central-db');
+const tracking = require('./tracking');
 
 const PORT = Number(process.env.PORT) || 47850;
 let adminSessionTokens = new Set();
@@ -316,6 +317,68 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+
+  // 1.6 Yönetici: Yeni Sürümü Yayınla (build'i tek adımda tüm kullanıcılara dağıtır)
+  if (pathname === '/api/admin/publish-update' && req.method === 'POST') {
+    const dbAuth = central.loadCentralDb();
+    const rawKey = String(req.headers['x-admin-key'] || req.headers['authorization'] || '').replace(/^Bearer\s+/i, '').trim();
+    // Güvenlik: Güncelleme yayınlamak tüm kullanıcılara kod göndermektir; yalnızca gerçek yönetici oturumu/şifresi kabul edilir.
+    const authorized = Boolean(rawKey) && (adminSessionTokens.has(rawKey) || rawKey === String(dbAuth.adminAuth?.password || ''));
+    if (!authorized) {
+      req.resume();
+      return replyJson(403, { ok: false, error: 'Yetkisiz erişim.' });
+    }
+    const MAX_ASAR = 250 * 1024 * 1024;
+    fs.mkdirSync(updateDataDir, { recursive: true });
+    const tmpFile = path.join(updateDataDir, 'incoming_app.asar.tmp');
+    const out = fs.createWriteStream(tmpFile);
+    let received = 0;
+    let aborted = false;
+    req.on('data', (chunk) => {
+      received += chunk.length;
+      if (received > MAX_ASAR && !aborted) {
+        aborted = true;
+        out.destroy();
+        try { fs.unlinkSync(tmpFile); } catch (_) {}
+        replyJson(413, { ok: false, error: 'Paket çok büyük.' });
+        req.destroy();
+      }
+    });
+    req.pipe(out);
+    out.on('finish', () => {
+      if (aborted) return;
+      try {
+        const head = Buffer.alloc(8);
+        const fd = fs.openSync(tmpFile, 'r');
+        fs.readSync(fd, head, 0, 8, 0);
+        fs.closeSync(fd);
+        if (received < 100000 || head.readUInt32LE(0) !== 4) {
+          fs.unlinkSync(tmpFile);
+          return replyJson(400, { ok: false, error: 'Geçersiz app.asar paketi.' });
+        }
+        const latest = path.join(updateDataDir, 'latest_app.asar');
+        const prev = path.join(updateDataDir, 'previous_app.asar');
+        try { if (fs.existsSync(latest)) fs.copyFileSync(latest, prev); } catch (_) {}
+        fs.renameSync(tmpFile, latest);
+        const q = parsedUrl.query || {};
+        const meta = {
+          version: String(q.version || '4.2.0').slice(0, 20),
+          buildTime: Math.max(Number(q.buildTime) || 0, Date.now()),
+          asarSize: received,
+          changelog: String(q.changelog || 'Yeni sürüm yayınlandı').slice(0, 500),
+          publishedAt: Date.now()
+        };
+        fs.writeFileSync(path.join(updateDataDir, 'latest_update.json'), JSON.stringify(meta, null, 2), 'utf8');
+        console.log('[J HABER CLOUD] Yeni sürüm yayınlandı:', meta.version, received, 'bayt');
+        return replyJson(200, { ok: true, meta });
+      } catch (e) {
+        return replyJson(500, { ok: false, error: e.message });
+      }
+    });
+    out.on('error', (e) => replyJson(500, { ok: false, error: e.message }));
+    return;
+  }
+
   // 2. Web Admin Paneli
   if (pathname === '/' || pathname === '/admin') {
     const htmlPath = path.join(__dirname, 'admin.html');
@@ -494,6 +557,7 @@ const server = http.createServer((req, res) => {
         u.lastSeenAt = Date.now();
         u.hostname = body.hostname || u.hostname || '';
         u.osInfo = body.osInfo || u.osInfo || '';
+        if (body.appBuildTime) { u.appBuildTime = Number(body.appBuildTime) || 0; u.appVersion = String(body.appVersion || '').slice(0, 20); }
         u.trafficRequests = (u.trafficRequests || 0) + 1;
         u.trafficBytes = (u.trafficBytes || 0) + bodyRaw.length;
         u.recentActions = u.recentActions || [];
@@ -694,6 +758,28 @@ const server = http.createServer((req, res) => {
         return replyJson(200, { ok: true, sportsData: db.sportsData || { matches: [], standings: [] } });
       }
 
+
+      // 6.1 Etkinlik Günlüğü (ekran görüntüsü / link / tweet açma kayıtları)
+      if (pathname === '/api/activity' && req.method === 'POST') {
+        const u = db.users.find(x => (body.userId && x.id === body.userId) || (body.username && x.username.toLowerCase() === String(body.username).trim().toLowerCase()));
+        if (!u) return replyJson(200, { ok: false, error: 'Kullanıcı bulunamadı.' });
+        const events = (Array.isArray(body.events) ? body.events : [body]).slice(0, 50);
+        let n = 0;
+        for (const ev of events) {
+          if (!ev || (!ev.url && !ev.title)) continue;
+          tracking.addActivity(u, ev, rawIp);
+          n++;
+        }
+        return replyJson(200, { ok: true, saved: n });
+      }
+
+      // 6.2 Haber Takip Excel'i (kullanıcı kendi paylaştığı haberleri işler)
+      if (pathname === '/api/news-track' && req.method === 'POST') {
+        const u = db.users.find(x => (body.userId && x.id === body.userId) || (body.username && x.username.toLowerCase() === String(body.username).trim().toLowerCase()));
+        if (!u) return replyJson(404, { ok: false, error: 'Kullanıcı bulunamadı.' });
+        return replyJson(200, tracking.newsAction(db, body, u));
+      }
+
       // -------------------------------------------------------------
       // YÖNETİCİ (ADMIN) UÇ NOKTALARI
       // -------------------------------------------------------------
@@ -727,6 +813,27 @@ const server = http.createServer((req, res) => {
           return replyJson(200, getFullState());
         }
 
+
+        // Etkinlik Günlüğü & Haber Takip (Excel görünümü)
+        if (pathname === '/api/admin/activity-list') {
+          return replyJson(200, { ok: true, ...tracking.listActivity(body) });
+        }
+        if (pathname === '/api/admin/activity-clear') {
+          tracking.clearActivity(Number(body.before) || 0);
+          return replyJson(200, { ok: true });
+        }
+        if (pathname === '/api/admin/news-tracker-list') {
+          return replyJson(200, { ok: true, ...tracking.listNewsAdmin(body) });
+        }
+        if (pathname === '/api/admin/news-tracker-delete') {
+          return replyJson(200, { ok: true, deleted: tracking.deleteNewsAdmin(body.ids || body.id) });
+        }
+        if (pathname === '/api/admin/update-info') {
+          let meta = {};
+          try { meta = JSON.parse(fs.readFileSync(path.join(updateDataDir, 'latest_update.json'), 'utf8')); } catch (_) {}
+          return replyJson(200, { ok: true, meta });
+        }
+
         // Çift Yönlü Tam Senkronizasyon (Masaüstü Yönetim Paneli <-> Bulut)
         if (pathname === '/api/admin/sync-full-db') {
           if (Array.isArray(body.users)) db.users = body.users;
@@ -736,6 +843,8 @@ const server = http.createServer((req, res) => {
           if (body.sportsData) db.sportsData = body.sportsData;
           if (body.adminContent) db.adminContent = body.adminContent;
           if (body.navConfig) db.navConfig = body.navConfig;
+          if (body.branding) db.branding = body.branding;
+          if (Array.isArray(body.deletedUsernames)) db.deletedUsernames = body.deletedUsernames;
           central.saveCentralDb(db);
           return replyJson(200, { ok: true, state: getFullState() });
         }
@@ -1659,6 +1768,7 @@ server.listen(PORT, '0.0.0.0', async () => {
   if (typeof central.restoreDbFromCloudBackup === 'function') {
     await central.restoreDbFromCloudBackup();
   }
+  await tracking.restoreFromBackup();
 
   // Render.com uyku modunu (spin-down) önlemek için her 8 dakikada bir kendi kendine Keep-Alive Ping at
   const p = String(process.env.PORT || '');

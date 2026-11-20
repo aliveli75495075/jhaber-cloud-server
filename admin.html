@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>J HABER YÖNETİM PANELİ — Merkez Kontrol & Güvenlik Sistemi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
 :root {
   --bg: #070b14;
@@ -468,6 +469,18 @@ input, textarea, select, code, pre { user-select: text; }
 }
 
 
+/* --- Yeni modüller için ek stiller --- */
+#admin-nav { overflow-y: auto; padding-right: 2px; }
+.sidebar { overflow: hidden; }
+a { text-decoration: none; }
+a:hover { text-decoration: underline; }
+input[type="date"].field { color-scheme: dark; }
+@media (max-width: 900px) {
+  #app-shell { grid-template-columns: 1fr; height: auto; }
+  .sidebar { flex-direction: column; max-height: 42vh; }
+  .grid2, .grid3, .grid4 { grid-template-columns: 1fr 1fr; }
+}
+
 </style>
 </head>
 <body>
@@ -536,6 +549,15 @@ input, textarea, select, code, pre { user-select: text; }
           <span>💬</span><span>Gelen Şikayet & Talepler</span>
           <span class="badge" id="badge-tickets" hidden>0</span>
         </button>
+        <button class="nav-btn" data-view="activity" style="color:#fbbf24;font-weight:700">
+          <span>📊</span><span>Etkinlik Günlüğü (Excel)</span>
+        </button>
+        <button class="nav-btn" data-view="newstrack" style="color:#34d399;font-weight:700">
+          <span>📑</span><span>Haber Takip Excel'i</span>
+        </button>
+        <button class="nav-btn" data-view="updates" style="color:#38bdf8;font-weight:700">
+          <span>🚀</span><span>Sürüm & Otomatik Güncelleme</span>
+        </button>
         <button class="nav-btn" data-view="security">
           <span>🛡</span><span>Güvenlik Radarı & Loglar</span>
           <span class="badge" id="badge-sec" hidden>0</span>
@@ -577,106 +599,364 @@ input, textarea, select, code, pre { user-select: text; }
   <div id="hover-inspector" hidden></div>
 
   <div id="toast" hidden></div>
-  
-<script>
-window.jadmin = {
-  _handlers: {},
-  on(event, cb) {
-    this._handlers[event] = this._handlers[event] || [];
-    this._handlers[event].push(cb);
-  },
-  emit(event, data) {
-    (this._handlers[event] || []).forEach(cb => {
-      try { cb(data); } catch (e) { console.error(e); }
-    });
-  },
-  async invoke(channel, data = {}) {
-    const ep = '/api/' + channel.replace(':', '/');
-    const token = localStorage.getItem('jh_admin_token') || '123456';
-    try {
-      const res = await fetch(ep, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token,
-          'x-admin-key': token
-        },
-        body: JSON.stringify(data)
-      });
-      if (res.status === 401 || res.status === 403) {
-        if (channel !== 'admin:login') {
-          localStorage.removeItem('jh_admin_token');
-          const ls = document.getElementById('login-screen');
-          if (ls) ls.style.display = 'flex';
-          const as = document.getElementById('app-shell');
-          if (as) as.hidden = true;
+  <script>
+/* J HABER YÖNETİM PANELİ — Bulut Bağlantı Katmanı (web + masaüstü İÇİN TEK DOSYA)
+ * Panel hem tarayıcıdan (https://jhaber-server.onrender.com/admin) hem masaüstü uygulamadan
+ * AYNI kodla ve AYNI bulut sunucusuyla konuşur; böylece arayüz ve işlevsellik birebir aynıdır.
+ */
+(function () {
+  'use strict';
+  const CLOUD_URL = 'https://jhaber-server.onrender.com';
+  const API_BASE = (typeof window.JH_API_BASE === 'string')
+    ? window.JH_API_BASE
+    : (location.protocol === 'file:' ? CLOUD_URL : '');
+
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+    del(k) { try { localStorage.removeItem(k); } catch (_) {} }
+  };
+
+  function showLogin() {
+    const ls = document.getElementById('login-screen');
+    if (ls) ls.style.display = 'flex';
+    const as = document.getElementById('app-shell');
+    if (as) as.hidden = true;
+    if (window.AdminApp) window.AdminApp.loggedIn = false;
+  }
+
+  function setBanner(msg) {
+    let b = document.getElementById('conn-banner');
+    if (!msg) { if (b) b.remove(); return; }
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'conn-banner';
+      b.style.cssText = 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:99999;background:#7f1d1d;color:#fff;padding:7px 16px;border-radius:99px;font-size:12.5px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.5)';
+      document.body.appendChild(b);
+    }
+    b.textContent = msg;
+  }
+
+  let failCount = 0;
+
+  window.jadmin = {
+    _handlers: {},
+    on(event, cb) {
+      (this._handlers[event] = this._handlers[event] || []).push(cb);
+      return () => { this._handlers[event] = (this._handlers[event] || []).filter(x => x !== cb); };
+    },
+    emit(event, data) {
+      (this._handlers[event] || []).forEach(cb => { try { cb(data); } catch (e) { console.error(e); } });
+    },
+    async invoke(channel, data = {}) {
+      const ep = API_BASE + '/api/' + channel.replace(':', '/');
+      const token = store.get('jh_admin_token') || '123456';
+      try {
+        const res = await fetch(ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'x-admin-key': token },
+          body: JSON.stringify(data)
+        });
+        failCount = 0; setBanner('');
+        if (res.status === 401 || res.status === 403) {
+          if (channel !== 'admin:login') { store.del('jh_admin_token'); showLogin(); }
+          const errJson = await res.json().catch(() => ({}));
+          return { ok: false, error: errJson.error || 'Yetkisiz erişim' };
         }
-        const errJson = await res.json().catch(() => ({}));
-        return { ok: false, error: errJson.error || 'Yetkisiz erişim' };
+        const result = await res.json();
+        if (result && result.token) store.set('jh_admin_token', result.token);
+        if (result && result.state) this.emit('admin:state', result.state);
+        return result;
+      } catch (err) {
+        return { ok: false, error: 'Sunucuya ulaşılamadı (sunucu uyanıyor olabilir, birkaç saniye sonra tekrar deneyin): ' + err.message };
       }
-      const result = await res.json();
-      if (result.token) {
-        localStorage.setItem('jh_admin_token', result.token);
-      }
-      if (result.state) {
-        this.emit('admin:state', result.state);
-      }
-      return result;
-    } catch (err) {
-      return { ok: false, error: 'Ağ bağlantı hatası: ' + err.message };
     }
-  }
-};
+  };
 
-// Canlı Bulut Poller (Her 2 saniyede durumu tazeler)
-setInterval(async () => {
-  const token = localStorage.getItem('jh_admin_token');
-  if (!token) return;
-  try {
-    const res = await fetch('/api/admin/get-state', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token,
-        'x-admin-key': token
-      }
-    });
-    if (res.ok) {
-      const state = await res.json();
-      window.jadmin.emit('admin:state', state);
+  // Masaüstü yerel yedek: bulut verisi (kullanıcılar, ayarlar) her dakika bu bilgisayara kaydedilir;
+  // Render ücretsiz plan diski silinir ve bulut boş dönerse otomatik geri yüklenir.
+  let lastBackupAt = 0;
+  let restoring = false;
+  async function backupOrRestore(state) {
+    if (!window.jhNative || !state || !state.db) return;
+    const db = state.db;
+    const users = db.users || [];
+    if (users.length) {
+      if (Date.now() - lastBackupAt < 60000) return;
+      lastBackupAt = Date.now();
+      window.jhNative.saveBackup({
+        users, tickets: db.tickets || [], securitySettings: db.securitySettings, sportsData: db.sportsData,
+        adminContent: db.adminContent, navConfig: db.navConfig, branding: db.branding, deletedUsernames: db.deletedUsernames || []
+      }).catch(() => {});
+      return;
     }
-  } catch (_) {}
-}, 2000);
-
-// Sayfa yüklendiğinde mevcut oturum varsa otomatik paneli aç
-window.addEventListener('DOMContentLoaded', () => {
-  const token = localStorage.getItem('jh_admin_token');
-  if (token) {
-    window.jadmin.invoke('admin:get-state').then(r => {
-      if (r && (r.db || r.server)) {
-        AdminApp.loggedIn = true;
-        AdminApp.state = r;
-        const ls = document.getElementById('login-screen');
-        if (ls) ls.style.display = 'none';
-        const as = document.getElementById('app-shell');
-        if (as) as.hidden = false;
-        AdminApp.updateHeaderAndBadges();
-        AdminApp.render();
+    if (restoring) return;
+    restoring = true;
+    try {
+      const b = await window.jhNative.loadBackup();
+      if (b && Array.isArray(b.users) && b.users.length) {
+        const r = await window.jadmin.invoke('admin:sync-full-db', b);
+        if (r && r.ok) setBanner('✔ Bulut verisi sıfırlanmıştı; ' + b.users.length + ' kullanıcı yerel yedekten geri yüklendi.');
+        setTimeout(() => setBanner(''), 8000);
       }
-    }).catch(() => {});
+    } catch (_) {} finally { setTimeout(() => { restoring = false; }, 30000); }
   }
 
-  // Logout düğmesine tıklandığında token'ı sil
-  const origLogoutBtn = document.getElementById('btn-logout');
-  if (origLogoutBtn) {
-    origLogoutBtn.addEventListener('click', () => {
-      localStorage.removeItem('jh_admin_token');
-    });
-  }
-});
+  // Canlı bulut yoklaması (2 sn)
+  let polling = false;
+  setInterval(async () => {
+    const token = store.get('jh_admin_token');
+    if (!token || polling) return;
+    polling = true;
+    try {
+      const res = await fetch(API_BASE + '/api/admin/get-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'x-admin-key': token }
+      });
+      if (res.ok) {
+        failCount = 0; setBanner('');
+        const st = await res.json();
+        window.jadmin.emit('admin:state', st);
+        backupOrRestore(st);
+      } else if (res.status === 401 || res.status === 403) {
+        store.del('jh_admin_token'); showLogin();
+      }
+    } catch (_) {
+      failCount++;
+      if (failCount >= 3) setBanner('⚠ Bulut sunucuyla bağlantı kesildi — yeniden bağlanılıyor…');
+    } finally { polling = false; }
+  }, 2000);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    if (store.get('jh_admin_token')) {
+      window.jadmin.invoke('admin:get-state').then(r => {
+        if (r && (r.db || r.server) && window.AdminApp) {
+          window.AdminApp.loggedIn = true;
+          window.AdminApp.state = r;
+          const ls = document.getElementById('login-screen');
+          if (ls) ls.style.display = 'none';
+          const as = document.getElementById('app-shell');
+          if (as) as.hidden = false;
+          window.AdminApp.updateHeaderAndBadges();
+          window.AdminApp.render();
+        }
+      }).catch(() => {});
+    }
+    const lo = document.getElementById('btn-logout');
+    if (lo) lo.addEventListener('click', () => store.del('jh_admin_token'));
+  });
+})();
+
 </script>
+  <script>
+/* J HABER — Bağımsız, kütüphanesiz minimal .xlsx (Excel) üretici.
+ * Başlık satırı biçimli, sütun genişlikli, dondurulmuş başlık + otomatik filtreli gerçek .xlsx dosyası oluşturur.
+ * Kullanım: JHXlsx.download('dosya.xlsx', [{ name:'Sayfa', columns:[{header:'Ad', width:20, link:false}], rows:[[...]] }])
+ * Bir sütun { link:true } ise http(s) değerleri tıklanabilir bağlantı olur.
+ */
+(function (root) {
+  'use strict';
 
-<script>
+  const enc = new TextEncoder();
+
+  const CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+
+  function crc32(bytes) {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function xmlEsc(v) {
+    return String(v == null ? '' : v)
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function colName(i) {
+    let s = '';
+    i += 1;
+    while (i > 0) {
+      const m = (i - 1) % 26;
+      s = String.fromCharCode(65 + m) + s;
+      i = Math.floor((i - 1) / 26);
+    }
+    return s;
+  }
+
+  function zipStore(files) {
+    const chunks = [];
+    const central = [];
+    let offset = 0;
+    const u16 = (n) => [n & 255, (n >>> 8) & 255];
+    const u32 = (n) => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
+    for (const f of files) {
+      const name = enc.encode(f.name);
+      const data = typeof f.data === 'string' ? enc.encode(f.data) : f.data;
+      const crc = crc32(data);
+      const local = new Uint8Array([
+        0x50, 0x4B, 0x03, 0x04, ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21),
+        ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(name.length), ...u16(0)
+      ]);
+      chunks.push(local, name, data);
+      central.push({ name, crc, size: data.length, offset });
+      offset += local.length + name.length + data.length;
+    }
+    const cdStart = offset;
+    for (const c of central) {
+      const rec = new Uint8Array([
+        0x50, 0x4B, 0x01, 0x02, ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21),
+        ...u32(c.crc), ...u32(c.size), ...u32(c.size), ...u16(c.name.length), ...u16(0), ...u16(0),
+        ...u16(0), ...u16(0), ...u32(0), ...u32(c.offset)
+      ]);
+      chunks.push(rec, c.name);
+      offset += rec.length + c.name.length;
+    }
+    const cdSize = offset - cdStart;
+    chunks.push(new Uint8Array([
+      0x50, 0x4B, 0x05, 0x06, ...u16(0), ...u16(0), ...u16(central.length), ...u16(central.length),
+      ...u32(cdSize), ...u32(cdStart), ...u16(0)
+    ]));
+    let total = 0;
+    for (const ch of chunks) total += ch.length;
+    const out = new Uint8Array(total);
+    let p = 0;
+    for (const ch of chunks) { out.set(ch, p); p += ch.length; }
+    return out;
+  }
+
+  const STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<fonts count="4">' +
+    '<font><sz val="11"/><name val="Calibri"/></font>' +
+    '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>' +
+    '<font><u/><sz val="11"/><color rgb="FF0563C1"/><name val="Calibri"/></font>' +
+    '<font><b/><sz val="14"/><color rgb="FF1F2937"/><name val="Calibri"/></font>' +
+    '</fonts>' +
+    '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FF1E3A5F"/><bgColor indexed="64"/></patternFill></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFF3F6FA"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+    '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>' +
+    '<border><left style="thin"><color rgb="FFD0D7E2"/></left><right style="thin"><color rgb="FFD0D7E2"/></right>' +
+    '<top style="thin"><color rgb="FFD0D7E2"/></top><bottom style="thin"><color rgb="FFD0D7E2"/></bottom><diagonal/></border></borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+    '<cellXfs count="5">' +
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+    '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+    '<xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
+    '<xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="0"/></xf>' +
+    '<xf numFmtId="49" fontId="0" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
+    '</cellXfs>' +
+    '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+
+  function sheetXml(sheet) {
+    const cols = sheet.columns || [];
+    const rows = sheet.rows || [];
+    const lastCol = colName(Math.max(cols.length - 1, 0));
+    const lastRow = rows.length + 1;
+    let x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<sheetViews><sheetView workbookViewId="0" showGridLines="1"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
+      '<sheetFormatPr defaultRowHeight="15"/>' +
+      '<cols>' + cols.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${c.width || 18}" customWidth="1"/>`).join('') + '</cols>' +
+      '<sheetData>';
+    x += '<row r="1" ht="24" customHeight="1">' + cols.map((c, i) =>
+      `<c r="${colName(i)}1" s="1" t="inlineStr"><is><t>${xmlEsc(c.header)}</t></is></c>`).join('') + '</row>';
+    rows.forEach((row, ri) => {
+      const r = ri + 2;
+      const band = ri % 2 === 1;
+      x += `<row r="${r}">`;
+      cols.forEach((c, ci) => {
+        const ref = colName(ci) + r;
+        const v = row[ci] == null ? '' : row[ci];
+        const sv = String(v);
+        if (c.link && /^https?:\/\//i.test(sv) && sv.length <= 250) {
+          x += `<c r="${ref}" s="3" t="str"><f>HYPERLINK("${xmlEsc(sv.replace(/"/g, '%22'))}","${xmlEsc(sv.replace(/"/g, '%22'))}")</f><v>${xmlEsc(sv)}</v></c>`;
+        } else if (typeof v === 'number' && isFinite(v)) {
+          x += `<c r="${ref}" s="${band ? 4 : 2}"><v>${v}</v></c>`;
+        } else {
+          x += `<c r="${ref}" s="${band ? 4 : 2}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(sv.slice(0, 32000))}</t></is></c>`;
+        }
+      });
+      x += '</row>';
+    });
+    x += '</sheetData>';
+    if (cols.length) x += `<autoFilter ref="A1:${lastCol}${lastRow}"/>`;
+    x += '<pageMargins left="0.5" right="0.5" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>' +
+      '<pageSetup orientation="landscape" fitToHeight="0"/></worksheet>';
+    return x;
+  }
+
+  function buildBytes(sheets) {
+    sheets = (sheets || []).filter(Boolean);
+    if (!sheets.length) sheets = [{ name: 'Sayfa1', columns: [], rows: [] }];
+    const files = [];
+    files.push({
+      name: '[Content_Types].xml',
+      data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+        sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('') +
+        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'
+    });
+    files.push({
+      name: '_rels/.rels',
+      data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'
+    });
+    const used = new Set();
+    const names = sheets.map((s, i) => {
+      let n = String(s.name || 'Sayfa' + (i + 1)).replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 31) || 'Sayfa' + (i + 1);
+      while (used.has(n.toLowerCase())) n = n.slice(0, 28) + '_' + (i + 1);
+      used.add(n.toLowerCase());
+      return n;
+    });
+    files.push({
+      name: 'xl/workbook.xml',
+      data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+        names.map((n, i) => `<sheet name="${xmlEsc(n)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('') + '</sheets></workbook>'
+    });
+    files.push({
+      name: 'xl/_rels/workbook.xml.rels',
+      data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('') +
+        `<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`
+    });
+    files.push({ name: 'xl/styles.xml', data: STYLES });
+    sheets.forEach((s, i) => files.push({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(s) }));
+    return zipStore(files);
+  }
+
+  function build(sheets) {
+    return new Blob([buildBytes(sheets)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+
+  function download(fileName, sheets) {
+    const blob = build(sheets);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  root.JHXlsx = { build, buildBytes, download };
+  if (typeof module !== 'undefined' && module.exports) module.exports = root.JHXlsx;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+  <script>
 (function() {
   'use strict';
 // J HABER YÖNETİM PANELİ — Ön Yüz Uygulaması (Canlı Bulut & Masaüstü Tam Entegre)
@@ -1671,7 +1951,10 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
           tickets: '💬 Kullanıcı Şikayet ve Talepleri (Yönetici İletişim Merkezi)',
           security: '🛡 Güvenlik Radarı, Yasaklı Kelime Kalkanı & Canlı Trafik Logları',
           branding: '🎨 Görünüm, Markalama & Menü Kişiselleştirme',
-          creds: '🔐 Yönetici ID / Şifre Değiştirme & Sunucu Bağlantı Bilgileri'
+          creds: '🔐 Yönetici ID / Şifre Değiştirme & Sunucu Bağlantı Bilgileri',
+          activity: '📊 Kullanıcı Etkinlik Günlüğü — Ekran Görüntüsü, Link & Tweet Kayıtları (Excel)',
+          newstrack: "📑 Haber Takip Excel'i — Kullanıcıların İşlediği Paylaşım Kayıtları",
+          updates: '🚀 Sürüm & Otomatik Güncelleme Merkezi'
         };
         document.getElementById('view-title').textContent = titles[this.view] || 'J HABER YÖNETİM PANELİ';
         if (this.view !== 'users') {
@@ -1828,7 +2111,11 @@ Yenileme ve detaylı bilgi için bu mesaja dönüş yapabilirsiniz.
     const c = document.getElementById('content');
     if (!c) return;
     const scrollTop = c.scrollTop;
-    if (this.view === 'users') this.renderUsers(c);
+    if (this._lastRenderedView !== this.view) { c.dataset.sig = ''; this._lastRenderedView = this.view; }
+    if (this.view === 'activity') this.renderActivity(c);
+    else if (this.view === 'newstrack') this.renderNewsTracker(c);
+    else if (this.view === 'updates') this.renderUpdates(c);
+    else if (this.view === 'users') this.renderUsers(c);
     else if (this.view === 'distro') this.renderDistro(c);
     else if (this.view === 'sports') this.renderSportsMgr(c);
     else if (this.view === 'killswitch') this.renderKillSwitch(c);
@@ -3755,6 +4042,398 @@ window.AdminApp = AdminApp;
   } else {
     AdminApp.init();
   }
+})();
+
+</script>
+  <script>
+/* J HABER YÖNETİM PANELİ — Excel Görünümlü Modüller
+ *  - 📊 Etkinlik Günlüğü (hangi kullanıcı hangi ekran görüntüsünü aldı / hangi linke, tweete tıkladı)
+ *  - 📑 Haber Takip Excel'i (kullanıcıların işlediği paylaşım kayıtları)
+ *  - 🚀 Sürüm & Otomatik Güncelleme durumu
+ * Hem masaüstü hem web panelde aynı dosya çalışır (tek kaynak).
+ */
+(function () {
+  'use strict';
+  const A = window.AdminApp;
+  if (!A) return;
+  const jadmin = window.jadmin;
+
+  const TYPE_LABELS = {
+    screenshot_news: '📸 Haber ekran görüntüsü aldı',
+    screenshot_tweet: '📸 Tweet ekran görüntüsü aldı',
+    screenshot_x_detail: '📸 Tweet (x.com detaylı) görüntüsü aldı',
+    link_open: '🔗 Linke tıkladı',
+    tweet_open: '𝕏 Tweeti açtı',
+    search_open: '🔎 Arama yaptı / açtı'
+  };
+  const TYPE_TAG = {
+    screenshot_news: 'warn', screenshot_tweet: 'warn', screenshot_x_detail: 'warn',
+    link_open: 'info', tweet_open: 'ok', search_open: ''
+  };
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const fmtDate = (ts) => { const d = new Date(ts); return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`; };
+  const fmtTime = (ts) => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+  const stamp = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`; };
+  const dayStart = (s) => { if (!s) return 0; const d = new Date(s + 'T00:00:00'); return d.getTime() || 0; };
+  const dayEnd = (s) => { if (!s) return 0; const d = new Date(s + 'T23:59:59.999'); return d.getTime() || 0; };
+
+  function csvDownload(name, headers, rows) {
+    const body = '﻿' + headers.join(';') + '\r\n' + rows.map(r => r.map(v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([body], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  }
+
+  function setHtml(c, key, html) {
+    // Aynı içerik tekrar çizilmesin (2 sn'lik canlı yenilemede titreme / odak kaybını önler)
+    if (c.dataset.sig === key + ':' + html.length + ':' + hash(html)) return false;
+    c.dataset.sig = key + ':' + html.length + ':' + hash(html);
+    c.innerHTML = html;
+    return true;
+  }
+  function hash(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
+
+  const dateInputs = (f, prefix) => `
+    <input type="date" class="field" id="${prefix}-from" value="${A.esc(f.from || '')}" title="Başlangıç tarihi">
+    <input type="date" class="field" id="${prefix}-to" value="${A.esc(f.to || '')}" title="Bitiş tarihi">`;
+
+  // =====================================================================
+  // 📊 ETKİNLİK GÜNLÜĞÜ
+  // =====================================================================
+  A.act = { items: [], total: 0, loaded: false, loading: false, err: '', filter: { username: '', type: '', q: '', from: '', to: '' } };
+
+  A.loadActivity = async function () {
+    if (this.act.loading) return;
+    this.act.loading = true;
+    const f = this.act.filter;
+    try {
+      const r = await jadmin.invoke('admin:activity-list', {
+        limit: 20000, username: f.username, type: f.type, q: f.q, since: dayStart(f.from), until: dayEnd(f.to)
+      });
+      if (r && r.ok) {
+        this.act.items = r.items || [];
+        this.act.total = r.total || 0;
+        this.act.err = '';
+      } else {
+        this.act.err = (r && r.error) || 'Kayıtlar alınamadı';
+      }
+      this.act.loaded = true;
+    } catch (e) {
+      this.act.err = String(e.message || e);
+    } finally {
+      this.act.loading = false;
+    }
+    if (this.view === 'activity' && !this.isTyping()) this.render();
+  };
+
+  A.exportActivityXlsx = function () {
+    const items = this.act.items;
+    if (!items.length) return this.toast('⚠️ Dışa aktarılacak kayıt yok.');
+    window.JHXlsx.download(`J_HABER_Etkinlik_Gunlugu_${stamp()}.xlsx`, [{
+      name: 'Etkinlik Günlüğü',
+      columns: [
+        { header: 'No', width: 7 }, { header: 'Tarih', width: 12 }, { header: 'Saat', width: 10 },
+        { header: 'Kullanıcı', width: 18 }, { header: 'İşlem', width: 34 }, { header: 'Haber / Tweet Başlığı', width: 60 },
+        { header: 'Paylaşım Sahibi', width: 22 }, { header: 'Link', width: 55, link: true }, { header: 'Kaynak', width: 22 }
+      ],
+      rows: items.map((r, i) => [items.length - i, fmtDate(r.time), fmtTime(r.time), r.username,
+        (TYPE_LABELS[r.type] || r.type).replace(/^[^\wÇĞİÖŞÜçğıöşü]+/u, ''), r.title || r.detail || '', r.author || '', r.url || '', r.source || ''])
+    }]);
+    this.toast('📊 Excel (.xlsx) dosyası indirildi.');
+  };
+
+  A.exportActivityCsv = function () {
+    const items = this.act.items;
+    if (!items.length) return this.toast('⚠️ Dışa aktarılacak kayıt yok.');
+    csvDownload(`J_HABER_Etkinlik_Gunlugu_${stamp()}.csv`,
+      ['No', 'Tarih', 'Saat', 'Kullanıcı', 'İşlem', 'Başlık', 'Paylaşım Sahibi', 'Link', 'Kaynak'],
+      items.map((r, i) => [items.length - i, fmtDate(r.time), fmtTime(r.time), r.username, TYPE_LABELS[r.type] || r.type, r.title || r.detail || '', r.author || '', r.url || '', r.source || '']));
+  };
+
+  A.renderActivity = function (c) {
+    const a = this.act;
+    if (!a.loaded && !a.loading) this.loadActivity();
+    const f = a.filter;
+    const items = a.items;
+    const users = Array.from(new Set((this.state?.db?.users || []).map(u => u.username))).sort((x, y) => x.localeCompare(y, 'tr'));
+    const today0 = dayStart(new Date().toISOString().slice(0, 10));
+    const stat = {
+      total: a.total,
+      today: items.filter(r => r.time >= today0).length,
+      shots: items.filter(r => String(r.type).startsWith('screenshot')).length,
+      links: items.filter(r => r.type === 'link_open').length,
+      tweets: items.filter(r => r.type === 'tweet_open').length
+    };
+    const SHOW = 500;
+    const html = `
+      <div class="panel" style="border-color:var(--accent)">
+        <div class="row" style="justify-content:space-between;margin-bottom:6px">
+          <div>
+            <h2 style="margin:0">📊 Kullanıcı Etkinlik Günlüğü (Excel)</h2>
+            <p class="hint" style="margin:3px 0 0">Hangi kullanıcı hangi haberin / tweetin ekran görüntüsünü aldı, hangi linke tıkladı, hangi tweeti açtı — tarih ve saatiyle birlikte otomatik tutulur. Canlı güncellenir.</p>
+          </div>
+          <div class="row" style="margin:0">
+            <button class="btn success" id="act-xlsx">⬇ Excel (.xlsx) İndir</button>
+            <button class="btn" id="act-csv">CSV</button>
+            <button class="btn" id="act-refresh">↻ Yenile</button>
+            <button class="btn danger" id="act-clear">🗑 Temizle</button>
+          </div>
+        </div>
+        <div class="grid4" style="margin:10px 0">
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Toplam Kayıt</div><div style="font-size:24px;font-weight:900;color:#fbbf24">${stat.total}</div></div>
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Bugün</div><div style="font-size:24px;font-weight:900;color:#60a5fa">${stat.today}</div></div>
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Ekran Görüntüsü</div><div style="font-size:24px;font-weight:900;color:#f59e0b">${stat.shots}</div></div>
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Link / Tweet Açma</div><div style="font-size:24px;font-weight:900;color:#22c55e">${stat.links + stat.tweets}</div></div>
+        </div>
+        <div class="row">
+          <select id="act-user"><option value="">👤 Tüm kullanıcılar</option>${users.map(u => `<option ${f.username === u ? 'selected' : ''}>${this.esc(u)}</option>`).join('')}</select>
+          <select id="act-type"><option value="">Tüm işlemler</option>${Object.keys(TYPE_LABELS).map(k => `<option value="${k}" ${f.type === k ? 'selected' : ''}>${TYPE_LABELS[k]}</option>`).join('')}</select>
+          ${dateInputs(f, 'act')}
+          <input class="field" id="act-q" style="flex:1;min-width:180px" placeholder="🔎 Başlık, link, kullanıcı ara..." value="${this.esc(f.q)}">
+          <button class="btn gold" id="act-apply">Filtrele</button>
+        </div>
+        ${a.err ? `<div class="tag err" style="margin-bottom:8px">⚠ ${this.esc(a.err)}</div>` : ''}
+        <div style="overflow:auto;max-height:68vh;border:1px solid var(--line);border-radius:10px">
+          <table class="tbl">
+            <thead><tr><th>No</th><th>Tarih</th><th>Saat</th><th>Kullanıcı</th><th>İşlem</th><th>Haber / Tweet Başlığı</th><th>Paylaşım Sahibi</th><th>Link</th><th>Kaynak</th></tr></thead>
+            <tbody>
+              ${items.slice(0, SHOW).map((r, i) => `
+                <tr>
+                  <td class="hint">${items.length - i}</td>
+                  <td style="white-space:nowrap">${fmtDate(r.time)}</td>
+                  <td style="white-space:nowrap;font-weight:700">${fmtTime(r.time)}</td>
+                  <td><b style="color:#fbbf24">${this.esc(r.username)}</b></td>
+                  <td><span class="tag ${TYPE_TAG[r.type] || ''}">${this.esc(TYPE_LABELS[r.type] || r.type)}</span></td>
+                  <td style="max-width:360px">${this.esc(r.title || r.detail || '—')}</td>
+                  <td>${this.esc(r.author || '—')}</td>
+                  <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.url ? `<a href="${this.esc(r.url)}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa" title="${this.esc(r.url)}">${this.esc(r.url)}</a>` : '—'}</td>
+                  <td class="hint">${this.esc(r.source || '')}</td>
+                </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;padding:30px" class="hint">${a.loaded ? 'Henüz kayıt yok. Kullanıcılar ekran görüntüsü aldığında / bir linke tıkladığında burada görünür.' : 'Yükleniyor…'}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        <div class="hint" style="margin-top:6px">${items.length > SHOW ? `Ekranda son ${SHOW} kayıt gösteriliyor; Excel dosyasına ${items.length} kaydın tamamı aktarılır.` : `${items.length} kayıt listeleniyor.`}</div>
+      </div>`;
+    if (!setHtml(c, 'act', html)) return;
+
+    const grab = () => {
+      f.username = c.querySelector('#act-user').value;
+      f.type = c.querySelector('#act-type').value;
+      f.from = c.querySelector('#act-from').value;
+      f.to = c.querySelector('#act-to').value;
+      f.q = c.querySelector('#act-q').value.trim();
+    };
+    c.querySelector('#act-apply').onclick = () => { grab(); this.loadActivity(); };
+    c.querySelector('#act-q').onkeydown = (e) => { if (e.key === 'Enter') { grab(); this.loadActivity(); } };
+    ['#act-user', '#act-type', '#act-from', '#act-to'].forEach(s => { c.querySelector(s).onchange = () => { grab(); this.loadActivity(); }; });
+    c.querySelector('#act-refresh').onclick = () => { this.loadActivity(); this.toast('↻ Yenilendi'); };
+    c.querySelector('#act-xlsx').onclick = () => this.exportActivityXlsx();
+    c.querySelector('#act-csv').onclick = () => this.exportActivityCsv();
+    c.querySelector('#act-clear').onclick = async () => {
+      if (!confirm('Tüm etkinlik kayıtları kalıcı olarak silinecek. Önce Excel indirdiniz mi? Devam edilsin mi?')) return;
+      const r = await jadmin.invoke('admin:activity-clear', {});
+      if (r && r.ok) { this.toast('🗑 Kayıtlar temizlendi'); this.loadActivity(); }
+    };
+  };
+
+  // =====================================================================
+  // 📑 HABER TAKİP EXCEL'İ (kullanıcıların işlediği paylaşımlar)
+  // =====================================================================
+  A.nt = { items: [], total: 0, loaded: false, loading: false, err: '', filter: { username: '', q: '', from: '', to: '' } };
+
+  A.loadNewsTracker = async function () {
+    if (this.nt.loading) return;
+    this.nt.loading = true;
+    const f = this.nt.filter;
+    try {
+      const r = await jadmin.invoke('admin:news-tracker-list', { limit: 20000, username: f.username, q: f.q, since: dayStart(f.from), until: dayEnd(f.to) });
+      if (r && r.ok) { this.nt.items = r.items || []; this.nt.total = r.total || 0; this.nt.err = ''; }
+      else this.nt.err = (r && r.error) || 'Kayıtlar alınamadı';
+      this.nt.loaded = true;
+    } catch (e) { this.nt.err = String(e.message || e); }
+    finally { this.nt.loading = false; }
+    if (this.view === 'newstrack' && !this.isTyping()) this.render();
+  };
+
+  A.exportNewsXlsx = function () {
+    const items = this.nt.items;
+    if (!items.length) return this.toast('⚠️ Dışa aktarılacak kayıt yok.');
+    window.JHXlsx.download(`J_HABER_Haber_Takip_${stamp()}.xlsx`, [{
+      name: 'Haber Takip',
+      columns: [
+        { header: 'No', width: 7 }, { header: 'Haber Başlığı', width: 60 }, { header: 'Link', width: 50, link: true },
+        { header: 'Konu', width: 22 }, { header: 'Paylaşım Mecrası', width: 18 }, { header: 'Kimin Attığı', width: 20 },
+        { header: 'Gün', width: 12 }, { header: 'Saat', width: 10 }, { header: 'Kaynak', width: 20 }, { header: 'Durum', width: 14 }, { header: 'Not', width: 40 }
+      ],
+      rows: items.map((r, i) => [items.length - i, r.title, r.url, r.topic, r.medium, r.username, fmtDate(r.sharedAt), fmtTime(r.sharedAt), r.source, r.status, r.note])
+    }]);
+    this.toast('📊 Excel (.xlsx) dosyası indirildi.');
+  };
+
+  A.renderNewsTracker = function (c) {
+    const n = this.nt;
+    if (!n.loaded && !n.loading) this.loadNewsTracker();
+    const f = n.filter;
+    const items = n.items;
+    const users = Array.from(new Set((this.state?.db?.users || []).map(u => u.username))).sort((x, y) => x.localeCompare(y, 'tr'));
+    const topics = {};
+    items.forEach(r => { const k = r.topic || 'Belirtilmemiş'; topics[k] = (topics[k] || 0) + 1; });
+    const topTopics = Object.entries(topics).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const byUser = {};
+    items.forEach(r => { byUser[r.username] = (byUser[r.username] || 0) + 1; });
+    const SHOW = 500;
+    const html = `
+      <div class="panel" style="border-color:var(--accent)">
+        <div class="row" style="justify-content:space-between;margin-bottom:6px">
+          <div>
+            <h2 style="margin:0">📑 Haber Takip Excel'i — Kullanıcı Paylaşım Kayıtları</h2>
+            <p class="hint" style="margin:3px 0 0">Kullanıcıların J HABER içindeki <b>"Haber Takip Excel'i"</b> sekmesine işlediği haberler: başlık, link, konu, kimin attığı, gün ve saat. Canlı güncellenir.</p>
+          </div>
+          <div class="row" style="margin:0">
+            <button class="btn success" id="nt-xlsx">⬇ Excel (.xlsx) İndir</button>
+            <button class="btn" id="nt-refresh">↻ Yenile</button>
+          </div>
+        </div>
+        <div class="grid4" style="margin:10px 0">
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Toplam Kayıt</div><div style="font-size:24px;font-weight:900;color:#fbbf24">${n.total}</div></div>
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Kayıt Giren Kullanıcı</div><div style="font-size:24px;font-weight:900;color:#60a5fa">${Object.keys(byUser).length}</div></div>
+          <div class="panel" style="margin:0;grid-column:span 2"><div class="hint" style="margin-bottom:4px">En Çok İşlenen Konular</div>${topTopics.map(([k, v]) => `<span class="tag info" style="margin:2px">${this.esc(k)} · ${v}</span>`).join('') || '<span class="hint">—</span>'}</div>
+        </div>
+        <div class="row">
+          <select id="nt-user"><option value="">👤 Tüm kullanıcılar</option>${users.map(u => `<option ${f.username === u ? 'selected' : ''}>${this.esc(u)}</option>`).join('')}</select>
+          ${dateInputs(f, 'nt')}
+          <input class="field" id="nt-q" style="flex:1;min-width:180px" placeholder="🔎 Başlık, konu, link, kişi ara..." value="${this.esc(f.q)}">
+          <button class="btn gold" id="nt-apply">Filtrele</button>
+        </div>
+        ${n.err ? `<div class="tag err" style="margin-bottom:8px">⚠ ${this.esc(n.err)}</div>` : ''}
+        <div style="overflow:auto;max-height:68vh;border:1px solid var(--line);border-radius:10px">
+          <table class="tbl">
+            <thead><tr><th>No</th><th>Haber Başlığı</th><th>Link</th><th>Konu</th><th>Mecra</th><th>Kimin Attığı</th><th>Gün</th><th>Saat</th><th>Not</th><th></th></tr></thead>
+            <tbody>
+              ${items.slice(0, SHOW).map((r, i) => `
+                <tr>
+                  <td class="hint">${items.length - i}</td>
+                  <td style="max-width:340px;font-weight:700">${this.esc(r.title)}</td>
+                  <td style="max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.url ? `<a href="${this.esc(r.url)}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa" title="${this.esc(r.url)}">${this.esc(r.source || r.url)}</a>` : '—'}</td>
+                  <td>${r.topic ? `<span class="tag info">${this.esc(r.topic)}</span>` : '—'}</td>
+                  <td>${this.esc(r.medium || '—')}</td>
+                  <td><b style="color:#fbbf24">${this.esc(r.username)}</b></td>
+                  <td style="white-space:nowrap">${fmtDate(r.sharedAt)}</td>
+                  <td style="white-space:nowrap;font-weight:700">${fmtTime(r.sharedAt)}</td>
+                  <td class="hint" style="max-width:200px">${this.esc(r.note || '')}</td>
+                  <td><button class="btn small danger" data-nt-del="${this.esc(r.id)}" title="Kaydı sil">🗑</button></td>
+                </tr>`).join('') || `<tr><td colspan="10" style="text-align:center;padding:30px" class="hint">${n.loaded ? 'Henüz kayıt yok. Kullanıcılar "Haber Takip Excel\'i" sekmesine haber işledikçe burada görünür.' : 'Yükleniyor…'}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        <div class="hint" style="margin-top:6px">${items.length > SHOW ? `Ekranda son ${SHOW} kayıt gösteriliyor; Excel dosyasına ${items.length} kaydın tamamı aktarılır.` : `${items.length} kayıt listeleniyor.`}</div>
+      </div>`;
+    if (!setHtml(c, 'nt', html)) return;
+
+    const grab = () => {
+      f.username = c.querySelector('#nt-user').value;
+      f.from = c.querySelector('#nt-from').value;
+      f.to = c.querySelector('#nt-to').value;
+      f.q = c.querySelector('#nt-q').value.trim();
+    };
+    c.querySelector('#nt-apply').onclick = () => { grab(); this.loadNewsTracker(); };
+    c.querySelector('#nt-q').onkeydown = (e) => { if (e.key === 'Enter') { grab(); this.loadNewsTracker(); } };
+    ['#nt-user', '#nt-from', '#nt-to'].forEach(s => { c.querySelector(s).onchange = () => { grab(); this.loadNewsTracker(); }; });
+    c.querySelector('#nt-refresh').onclick = () => { this.loadNewsTracker(); this.toast('↻ Yenilendi'); };
+    c.querySelector('#nt-xlsx').onclick = () => this.exportNewsXlsx();
+    c.querySelectorAll('[data-nt-del]').forEach(b => {
+      b.onclick = async () => {
+        if (!confirm('Bu kayıt kalıcı olarak silinsin mi?')) return;
+        const r = await jadmin.invoke('admin:news-tracker-delete', { id: b.dataset.ntDel });
+        if (r && r.ok) { this.toast('🗑 Kayıt silindi'); this.loadNewsTracker(); }
+      };
+    });
+  };
+
+  // =====================================================================
+  // 🚀 SÜRÜM & OTOMATİK GÜNCELLEME
+  // =====================================================================
+  A.upd = { meta: null, loaded: false, loading: false };
+
+  A.loadUpdateInfo = async function () {
+    if (this.upd.loading) return;
+    this.upd.loading = true;
+    try {
+      const r = await jadmin.invoke('admin:update-info', {});
+      if (r && r.ok) this.upd.meta = r.meta || {};
+      this.upd.loaded = true;
+    } catch (_) {}
+    finally { this.upd.loading = false; }
+    if (this.view === 'updates' && !this.isTyping()) this.render();
+  };
+
+  A.renderUpdates = function (c) {
+    const u = this.upd;
+    if (!u.loaded && !u.loading) this.loadUpdateInfo();
+    const meta = u.meta || {};
+    const users = (this.state?.db?.users || []).filter(x => x.status === 'active' || x.status === 'pending');
+    const latest = Number(meta.buildTime || 0);
+    const rows = users.map(x => {
+      const bt = Number(x.appBuildTime || 0);
+      const state = !bt ? 'unknown' : (latest && bt >= latest ? 'ok' : 'old');
+      return { x, bt, state };
+    }).sort((a, b) => (a.state === 'old' ? 0 : 1) - (b.state === 'old' ? 0 : 1));
+    const okCount = rows.filter(r => r.state === 'ok').length;
+    const oldCount = rows.filter(r => r.state === 'old').length;
+    const html = `
+      <div class="panel" style="border-color:var(--accent)">
+        <h2>🚀 Sürüm & Otomatik Güncelleme Merkezi</h2>
+        <p class="hint">Bu bilgisayarda yeni bir sürüm yayınladığınız anda, internete bağlı tüm J HABER kullanıcıları arka planda güncellemeyi indirir ve uygulamayı otomatik olarak yeniler (en geç ~25 saniye içinde).</p>
+        <div class="grid4" style="margin:10px 0">
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Yayındaki Sürüm</div><div style="font-size:22px;font-weight:900;color:#fbbf24">${this.esc(meta.version || '—')}</div></div>
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Yayın Zamanı</div><div style="font-size:14px;font-weight:800;color:#60a5fa;margin-top:6px">${latest ? fmtDate(latest) + ' ' + fmtTime(latest) : '—'}</div></div>
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Güncel Kullanıcı</div><div style="font-size:22px;font-weight:900;color:#22c55e">${okCount}</div></div>
+          <div class="panel" style="margin:0;text-align:center"><div class="hint">Güncelleme Bekleyen</div><div style="font-size:22px;font-weight:900;color:#f59e0b">${oldCount}</div></div>
+        </div>
+        <div class="hint" style="margin-bottom:10px">📝 Değişiklik notu: <b>${this.esc(meta.changelog || '—')}</b> · Paket boyutu: ${meta.asarSize ? (meta.asarSize / 1048576).toFixed(1) + ' MB' : '—'}</div>
+        <div class="panel" style="background:var(--bg);margin-bottom:12px">
+          <b>Yeni sürüm nasıl yayınlanır?</b>
+          <div class="hint" style="margin-top:4px">Proje klasöründeki <code>GUNCELLEMEYI_YAYINLA.bat</code> dosyasına çift tıklayın. Kaynak kodlar paketlenir, bu bilgisayardaki uygulama güncellenir ve paket buluta yüklenir; tüm kullanıcılar otomatik güncellenir.</div>
+        </div>
+        <div style="overflow:auto;max-height:55vh;border:1px solid var(--line);border-radius:10px">
+          <table class="tbl">
+            <thead><tr><th>Kullanıcı</th><th>Durum</th><th>Kullandığı Sürüm</th><th>Son Görülme</th></tr></thead>
+            <tbody>
+              ${rows.map(({ x, bt, state }) => `
+                <tr>
+                  <td><b style="color:#fbbf24">${this.esc(x.username)}</b></td>
+                  <td>${state === 'ok' ? '<span class="tag ok">✓ Güncel</span>' : state === 'old' ? '<span class="tag warn">⏳ Güncelleme bekliyor</span>' : '<span class="tag">Bilinmiyor (eski sürüm)</span>'}</td>
+                  <td class="hint">${bt ? fmtDate(bt) + ' ' + fmtTime(bt) + (x.appVersion ? ' · v' + this.esc(x.appVersion) : '') : '—'}</td>
+                  <td class="hint">${x.lastSeenAt ? this.relTime(x.lastSeenAt) : '—'}</td>
+                </tr>`).join('') || '<tr><td colspan="4" class="hint" style="text-align:center;padding:20px">Kullanıcı yok.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    setHtml(c, 'upd', html);
+  };
+
+  // Görünüm sekmesi açıkken kayıtları canlı tazele
+  setInterval(() => {
+    if (!A.loggedIn || A.isTyping()) return;
+    if (A.view === 'activity') A.loadActivity();
+    else if (A.view === 'newstrack') A.loadNewsTracker();
+    else if (A.view === 'updates') A.loadUpdateInfo();
+  }, 6000);
+
+  // Sekmeye geçişte verileri sıfırdan çek
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest && e.target.closest('#admin-nav [data-view]');
+    if (!b) return;
+    const v = b.dataset.view;
+    const c = document.getElementById('content');
+    if (c) c.dataset.sig = '';
+    if (v === 'activity') A.loadActivity();
+    if (v === 'newstrack') A.loadNewsTracker();
+    if (v === 'updates') A.loadUpdateInfo();
+  });
 })();
 
 </script>

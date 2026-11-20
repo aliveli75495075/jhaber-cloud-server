@@ -1,6 +1,6 @@
 {
-  "version": "4.1.0",
-  "buildTime": 1795161076849,
-  "asarSize": 2675103,
-  "changelog": "Otomatik bulut güncelleme sistemi ve en son özellikler"
+  "version": "4.2.0",
+  "buildTime": 1795175334576,
+  "asarSize": 2648150,
+  "changelog": "Yeni: Haber Takip Excel'i, yönetici yanıtları, etkinlik günlüğü, filigran kaldırıldı"
 }
