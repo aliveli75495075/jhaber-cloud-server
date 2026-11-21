@@ -397,15 +397,15 @@
       "registeredAt": 1795157511810,
       "approvedAt": 1795157521881,
       "expiresAt": 1797749521881,
-      "lastSeenAt": 1795249671797,
-      "lastIp": "212.174.189.136",
-      "lastPort": 39936,
+      "lastSeenAt": 1795256489517,
+      "lastIp": "45.142.26.95",
+      "lastPort": 35152,
       "hostname": "DESKTOP-RJQ62DT",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 5221,
-      "trafficBytes": 5361523,
-      "currentView": "login_wait",
-      "currentViewLabel": "⏳ Onay / Süre Bekleme Ekranı",
+      "trafficRequests": 6913,
+      "trafficBytes": 7117819,
+      "currentView": "news",
+      "currentViewLabel": "Haberler",
       "currentSubMode": "Canlı Izgara Görünümü",
       "keywords": {
         "starred": [],
@@ -422,6 +422,10 @@
         "searchQuery": ""
       },
       "recentActions": [
+        {
+          "time": 1795249675226,
+          "text": "Sekme değiştirdi: Haberler"
+        },
         {
           "time": 1795249671797,
           "text": "Uygulamaya giriş yaptı (212.174.189.136:39936)"
@@ -517,10 +521,6 @@
         {
           "time": 1795191120983,
           "text": "Sekme değiştirdi: 📑 Haber Takip Excel'i — Paylaştığınız Haberleri İşleyin"
-        },
-        {
-          "time": 1795191119547,
-          "text": "Sekme değiştirdi: Kelime Yoğunluk Grafiği"
         }
       ],
       "securityFlags": [],
@@ -944,13 +944,13 @@
       "registeredAt": 1795190230090,
       "approvedAt": 1795171648039,
       "expiresAt": 1797763648039,
-      "lastSeenAt": 1795249673997,
+      "lastSeenAt": 1795256488801,
       "lastIp": "62.101.165.184",
-      "lastPort": 39960,
+      "lastPort": 49140,
       "hostname": "PCC",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 16969,
-      "trafficBytes": 17698302,
+      "trafficRequests": 18916,
+      "trafficBytes": 19729023,
       "currentView": "news",
       "currentViewLabel": "Haberler",
       "currentSubMode": "Canlı Izgara Görünümü",
@@ -1077,18 +1077,24 @@
       "registeredAt": 1795190227283,
       "approvedAt": 1795164880581,
       "expiresAt": 1797756880581,
-      "lastSeenAt": 1795249671820,
+      "lastSeenAt": 1795256489883,
       "lastIp": "212.174.189.136",
-      "lastPort": 39942,
+      "lastPort": 35154,
       "hostname": "vpro",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 15586,
-      "trafficBytes": 15213662,
-      "currentView": "news",
-      "currentViewLabel": "Haberler",
-      "currentSubMode": "TweetDeck Sütunları",
+      "trafficRequests": 17367,
+      "trafficBytes": 17092131,
+      "currentView": "starkw",
+      "currentViewLabel": "🌟 Yıldızlı Anahtar Kelimeler (Haber Siteleri + X Birleşik Takip)",
+      "currentSubMode": "Tek Sütun Birleşik Akış",
       "keywords": {
-        "starred": [],
+        "starred": [
+          "POLİS",
+          "OPERASYON",
+          "EMNİYET",
+          "SON DAKİKA",
+          "ANKARA"
+        ],
         "general": [],
         "xSingle": [],
         "columns": [
@@ -1102,6 +1108,34 @@
         "searchQuery": ""
       },
       "recentActions": [
+        {
+          "time": 1795252425520,
+          "text": "Sekme değiştirdi: 🌟 Yıldızlı Anahtar Kelimeler (Haber Siteleri + X Birleşik Takip)"
+        },
+        {
+          "time": 1795252357739,
+          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
+        },
+        {
+          "time": 1795252319694,
+          "text": "Sekme değiştirdi: 🌟 Yıldızlı Anahtar Kelimeler (Haber Siteleri + X Birleşik Takip)"
+        },
+        {
+          "time": 1795252294192,
+          "text": "Sekme değiştirdi: Kaynaklar & Sağlık Durumu"
+        },
+        {
+          "time": 1795252233827,
+          "text": "Sekme değiştirdi: 📑 Haber Takip Excel'i"
+        },
+        {
+          "time": 1795251890842,
+          "text": "Sekme değiştirdi: 🌟 Yıldızlı Anahtar Kelimeler (Haber Siteleri + X Birleşik Takip)"
+        },
+        {
+          "time": 1795250683318,
+          "text": "Sekme değiştirdi: X Takibi & Anahtar Kelimeler"
+        },
         {
           "time": 1795190227284,
           "text": "Aktif oturum bulut tarafından otomatik korundu (212.174.189.136:50126)"
