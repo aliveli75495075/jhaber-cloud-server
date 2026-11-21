@@ -397,16 +397,16 @@
       "registeredAt": 1795157511810,
       "approvedAt": 1795157521881,
       "expiresAt": 1797749521881,
-      "lastSeenAt": 1795208483762,
+      "lastSeenAt": 1795249671797,
       "lastIp": "212.174.189.136",
-      "lastPort": 60266,
+      "lastPort": 39936,
       "hostname": "DESKTOP-RJQ62DT",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 5219,
-      "trafficBytes": 5359819,
-      "currentView": "sports",
-      "currentViewLabel": "⚽ Spor & Canlı Skor / Fikstür",
-      "currentSubMode": "",
+      "trafficRequests": 5221,
+      "trafficBytes": 5361523,
+      "currentView": "login_wait",
+      "currentViewLabel": "⏳ Onay / Süre Bekleme Ekranı",
+      "currentSubMode": "Canlı Izgara Görünümü",
       "keywords": {
         "starred": [],
         "general": [],
@@ -422,6 +422,14 @@
         "searchQuery": ""
       },
       "recentActions": [
+        {
+          "time": 1795249671797,
+          "text": "Uygulamaya giriş yaptı (212.174.189.136:39936)"
+        },
+        {
+          "time": 1795249671724,
+          "text": "Sekme değiştirdi: ⏳ Onay / Süre Bekleme Ekranı"
+        },
         {
           "time": 1795193873079,
           "text": "Sekme değiştirdi: ⚽ Spor & Canlı Skor / Fikstür"
@@ -513,14 +521,6 @@
         {
           "time": 1795191119547,
           "text": "Sekme değiştirdi: Kelime Yoğunluk Grafiği"
-        },
-        {
-          "time": 1795191100531,
-          "text": "Sekme değiştirdi: 📑 Haber Takip Excel'i — Paylaştığınız Haberleri İşleyin"
-        },
-        {
-          "time": 1795191063895,
-          "text": "Sekme değiştirdi: Görsel & Birleşik Arama"
         }
       ],
       "securityFlags": [],
@@ -529,24 +529,24 @@
         "lockedHostname": "DESKTOP-RJQ62DT"
       },
       "forceLogoutAt": 0,
-      "geoCity": "Tirana",
-      "geoRegion": "Tirana",
-      "geoCountry": "Albania",
-      "geoIsp": "Keminet SHPK",
-      "geoLat": 41.3253,
-      "geoLon": 19.8184,
-      "geoIpResolved": "45.142.26.95",
+      "geoCity": "Ankara",
+      "geoRegion": "Ankara",
+      "geoCountry": "Türkiye",
+      "geoIsp": "Turk Telekomunikasyon Anonim Sirketi",
+      "geoLat": 39.9207,
+      "geoLon": 32.854,
+      "geoIpResolved": "212.174.189.136",
       "isOnline": true,
       "appBuildTime": 1795193455440,
       "appVersion": "4.4.0",
-      "geoDistrict": "Tirana",
-      "geoSubCity": "Tirana",
-      "geoCountryCode": "AL",
-      "geoZip": "1001",
+      "geoDistrict": "Ankara",
+      "geoSubCity": "Ankara",
+      "geoCountryCode": "TR",
+      "geoZip": "06420",
       "geoMobile": false,
-      "geoProxy": true,
+      "geoProxy": false,
       "geoSource": "ip-api",
-      "geoResolvedAt": 1795197866069
+      "geoResolvedAt": 1795249671798
     },
     {
       "id": "usr_1795089252461_f11x",
@@ -944,13 +944,13 @@
       "registeredAt": 1795190230090,
       "approvedAt": 1795171648039,
       "expiresAt": 1797763648039,
-      "lastSeenAt": 1795208485832,
+      "lastSeenAt": 1795249673997,
       "lastIp": "62.101.165.184",
-      "lastPort": 60296,
+      "lastPort": 39960,
       "hostname": "PCC",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 5214,
-      "trafficBytes": 5437837,
+      "trafficRequests": 16969,
+      "trafficBytes": 17698302,
       "currentView": "news",
       "currentViewLabel": "Haberler",
       "currentSubMode": "Canlı Izgara Görünümü",
@@ -1077,13 +1077,13 @@
       "registeredAt": 1795190227283,
       "approvedAt": 1795164880581,
       "expiresAt": 1797756880581,
-      "lastSeenAt": 1795208483419,
+      "lastSeenAt": 1795249671820,
       "lastIp": "212.174.189.136",
-      "lastPort": 60256,
+      "lastPort": 39942,
       "hostname": "vpro",
       "osInfo": "win32 10.0.26200 (x64)",
-      "trafficRequests": 4796,
-      "trafficBytes": 4671832,
+      "trafficRequests": 15586,
+      "trafficBytes": 15213662,
       "currentView": "news",
       "currentViewLabel": "Haberler",
       "currentSubMode": "TweetDeck Sütunları",
@@ -1124,6 +1124,14 @@
   ],
   "tickets": [],
   "trafficLogs": [
+    {
+      "id": "log_1795249671797_rbry",
+      "time": 1795249671797,
+      "type": "login",
+      "username": "irem",
+      "ipPort": "212.174.189.136:39936",
+      "detail": "Giriş yapıldı (Durum: active, Paket: 1 Ay (30 Gün))"
+    },
     {
       "id": "log_1795193872088_rhdf",
       "time": 1795193872088,
