@@ -7,6 +7,22 @@ const url = require('url');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
+
+// ---- VERİ (BANDWIDTH) TASARRUFU ----
+// Render ücretsiz plan aylık 5 GB çıkış verisi verir. Tasarruf için:
+//  1) JSON/HTML yanıtları gzip ile sıkıştırılır (tarayıcı/panel).
+//  2) Kalp atışında (3-4 sn'de bir) merkez durum yalnızca DEĞİŞTİYSE veya 2 dakikada bir gönderilir.
+//  3) Güncelleme paketi aynı IP'ye sınırlı sayıda indirilir (bozuk eski sürümlerin sonsuz indirme döngüsünü keser).
+const hbStateCache = new Map();   // kullanıcı+cihaz -> { h, t }
+const dlCounter = new Map();      // ip|buildTime -> { n, t }
+const bwStats = { since: Date.now(), bytes: 0, requests: 0, byPath: {} };
+function bwCount(pathname, n) {
+  bwStats.bytes += n; bwStats.requests++;
+  const k = String(pathname || '').replace(/^\/api\/admin\/.*/, '/api/admin/*');
+  const e = bwStats.byPath[k] || (bwStats.byPath[k] = { bytes: 0, n: 0 });
+  e.bytes += n; e.n++;
+}
 const central = require('./central-db');
 const tracking = require('./tracking');
 const archive = require('./archive');
@@ -281,13 +297,16 @@ const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
+  const acceptsGzip = /\bgzip\b/i.test(String(req.headers['accept-encoding'] || ''));
   const replyJson = (statusCode, data) => {
-    const payload = Buffer.from(JSON.stringify(data), 'utf8');
-    res.writeHead(statusCode, {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Content-Length': payload.length,
-      'Connection': 'close'
-    });
+    let payload = Buffer.from(JSON.stringify(data), 'utf8');
+    const headers = { 'Content-Type': 'application/json; charset=utf-8', 'Connection': 'close' };
+    if (acceptsGzip && payload.length > 800) {
+      try { payload = zlib.gzipSync(payload, { level: 6 }); headers['Content-Encoding'] = 'gzip'; headers['Vary'] = 'Accept-Encoding'; } catch (_) {}
+    }
+    headers['Content-Length'] = payload.length;
+    bwCount(pathname, payload.length);
+    res.writeHead(statusCode, headers);
     res.end(payload);
   };
 
@@ -330,6 +349,18 @@ const server = http.createServer((req, res) => {
       return replyJson(404, { ok: false, error: 'Güncelleme paketi sunucuda bulunamadı.' });
     }
     const stat = fs.statSync(asarFile);
+    {
+      // Aynı IP aynı paketi 6 saatte en fazla 3 kez indirebilir (kurulamayan eski sürümlerin döngüsü veriyi tüketmesin)
+      const dip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+      const dk = dip + '|' + stat.mtimeMs;
+      const de = dlCounter.get(dk);
+      if (de && Date.now() - de.t < 6 * 3600 * 1000) {
+        if (de.n >= 3) return replyJson(429, { ok: false, error: 'Bu paket bu bağlantıdan kısa sürede çok kez indirildi. Daha sonra tekrar deneyin.' });
+        de.n++;
+      } else dlCounter.set(dk, { n: 1, t: Date.now() });
+      if (dlCounter.size > 5000) dlCounter.clear();
+      bwCount(pathname, stat.size);
+    }
     res.writeHead(200, {
       'Content-Type': 'application/octet-stream',
       'Content-Length': stat.size,
@@ -407,8 +438,12 @@ const server = http.createServer((req, res) => {
   if (pathname === '/' || pathname === '/admin') {
     const htmlPath = path.join(__dirname, 'admin.html');
     if (fs.existsSync(htmlPath)) {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(fs.readFileSync(htmlPath, 'utf8'));
+      let page = fs.readFileSync(htmlPath);
+      const hh = { 'Content-Type': 'text/html; charset=utf-8' };
+      if (acceptsGzip) { try { page = zlib.gzipSync(page); hh['Content-Encoding'] = 'gzip'; hh['Vary'] = 'Accept-Encoding'; } catch (_) {} }
+      bwCount(pathname, page.length);
+      res.writeHead(200, hh);
+      res.end(page);
       return;
     }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -718,11 +753,18 @@ const server = http.createServer((req, res) => {
         }
 
         central.saveCentralDb(db);
-        return replyJson(200, {
-          ok: true,
-          user: sanitizeUserForClient(u),
-          centralState: buildClientSyncPayload(db, u)
-        });
+        {
+          const cs = buildClientSyncPayload(db, u);
+          const h = crypto.createHash('md5').update(JSON.stringify(cs)).digest('hex');
+          const hk = u.id + '|' + rawIp + '|' + (body.hostname || '');
+          const prev = hbStateCache.get(hk);
+          const sendFull = !prev || prev.h !== h || Date.now() - prev.t > 2 * 60 * 1000;
+          if (sendFull) hbStateCache.set(hk, { h, t: Date.now() });
+          if (hbStateCache.size > 5000) hbStateCache.clear();
+          return replyJson(200, sendFull
+            ? { ok: true, user: sanitizeUserForClient(u), centralState: cs }
+            : { ok: true, user: sanitizeUserForClient(u), stateUnchanged: true });
+        }
       }
 
       // 5. Destek Talebi
@@ -848,6 +890,10 @@ const server = http.createServer((req, res) => {
 
 
         // Etkinlik Günlüğü & Haber Takip (Excel görünümü)
+        if (pathname === '/api/admin/bandwidth') {
+          const top = Object.entries(bwStats.byPath).sort((a, b) => b[1].bytes - a[1].bytes).slice(0, 12).map(([p, v]) => ({ path: p, bytes: v.bytes, n: v.n }));
+          return replyJson(200, { ok: true, since: bwStats.since, bytes: bwStats.bytes, requests: bwStats.requests, top });
+        }
         if (pathname === '/api/admin/plans-save') {
           db.plans = central.sanitizePlans(body.plans, db.plans);
           db.plansUpdatedAt = Date.now();

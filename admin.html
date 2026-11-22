@@ -729,7 +729,7 @@ input[type="date"].field { color-scheme: dark; }
   let polling = false;
   setInterval(async () => {
     const token = store.get('jh_admin_token');
-    if (!token || polling) return;
+    if (!token || polling || document.hidden) return; // arka plandaki sekme veri harcamasın
     polling = true;
     try {
       const res = await fetch(API_BASE + '/api/admin/get-state', {
@@ -748,7 +748,7 @@ input[type="date"].field { color-scheme: dark; }
       failCount++;
       if (failCount >= 3) setBanner('⚠ Bulut sunucuyla bağlantı kesildi — yeniden bağlanılıyor…');
     } finally { polling = false; }
-  }, 2000);
+  }, 4000);
 
   window.addEventListener('DOMContentLoaded', () => {
     if (store.get('jh_admin_token')) {
